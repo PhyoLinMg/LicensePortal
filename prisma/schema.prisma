@@ -1,0 +1,88 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// A product registered in the portal (e.g. "Handoff", "BillingTool")
+model Product {
+  id             String    @id @default(uuid())
+  name           String
+  slug           String    @unique
+  keyId          String    // e.g. "v1" — embed in product binary
+  publicKeyB64   String    // SubjectPublicKeyInfo DER, base64 — copy into product
+  privateKeyEnc  String    // AES-256-GCM encrypted PKCS#8 DER, base64
+  issuerName     String    @default("handoff-license-server")
+  createdAt      DateTime  @default(now())
+  licenses       License[]
+}
+
+model Customer {
+  id        String    @id @default(uuid())
+  name      String
+  email     String?
+  notes     String?
+  createdAt DateTime  @default(now())
+  licenses  License[]
+}
+
+model License {
+  id              String     @id @default(uuid())
+  customerId      String
+  productId       String
+  keyId           String
+  tier            String
+  features        Json       @default("[]")  // string[]
+  limits          Json       @default("{}")  // Map<String, Long> — product-defined
+  instanceId      String?    // null = unbound until first heartbeat
+  issuedAt        DateTime   @default(now())
+  notBefore       DateTime
+  expiresAt       DateTime
+  gracePeriodDays Int        @default(21)
+  heartbeatUrl    String?
+  status          String     @default("active")  // active | revoked | superseded
+  revokedAt       DateTime?
+  revokeReason    String?
+  payloadJson     Json       // exact signed claims (audit)
+  signature       String     // base64url sig
+  licenseText     String     // full base64url(payload).base64url(sig) text
+  customer        Customer   @relation(fields: [customerId], references: [id])
+  product         Product    @relation(fields: [productId], references: [id])
+  instances       Instance[]
+  auditEvents     AuditEvent[]
+
+  @@index([customerId])
+  @@index([productId])
+  @@index([status])
+}
+
+// App instances that have reported a heartbeat
+model Instance {
+  id             String   @id @default(uuid())
+  licenseId      String
+  instanceUuid   String   @unique  // self-reported UUID from the app
+  publicKey      String?  // instance Ed25519 public key (bound on first heartbeat)
+  latestSequence BigInt   @default(0)
+  firstSeenAt    DateTime @default(now())
+  lastSeenAt     DateTime @default(now())
+  lastVersion    String?
+  lastUsage      Json?
+  license        License  @relation(fields: [licenseId], references: [id])
+
+  @@index([licenseId])
+}
+
+model AuditEvent {
+  id        String   @id @default(uuid())
+  licenseId String?
+  type      String   // ISSUE | REVOKE | RENEW | HEARTBEAT | HEARTBEAT_FAIL | ADMIN_LOGIN
+  payload   Json
+  createdAt DateTime @default(now())
+  license   License? @relation(fields: [licenseId], references: [id])
+
+  @@index([licenseId])
+  @@index([createdAt])
+}
