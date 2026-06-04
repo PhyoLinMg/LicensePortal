@@ -11,11 +11,15 @@ export default function NewProductPage() {
   const [created, setCreated] = useState<{
     id: string; name: string; slug: string; keyId: string; publicKeyB64: string
   } | null>(null)
+  const [copied, setCopied] = useState(false)
 
   function set(k: string, v: string) {
-    setForm((f) => ({ ...f, [k]: v }))
+    setForm(f => ({ ...f, [k]: v }))
     if (k === 'name' && !form.slug) {
-      setForm((f) => ({ ...f, slug: v.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') }))
+      setForm(f => ({
+        ...f,
+        slug: v.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, ''),
+      }))
     }
   }
 
@@ -44,139 +48,315 @@ export default function NewProductPage() {
     }
   }
 
-  function copy(text: string) {
-    navigator.clipboard.writeText(text)
+  async function copy(text: string) {
+    try { await navigator.clipboard.writeText(text) } catch { /* ignore */ }
+    setCopied(true)
+    setTimeout(() => setCopied(false), 2000)
   }
 
   if (created) {
     return (
-      <div className="p-8 max-w-2xl space-y-4">
-        <div className="bg-green-900/20 border border-green-800 rounded-xl p-4">
-          <p className="text-sm text-green-400 font-medium">Product created — keypair generated</p>
-          <p className="text-xs text-gray-400 mt-1">
-            The private key is encrypted and stored securely. Copy the public key below and embed it in your product binary.
-          </p>
-        </div>
-
-        <div className="bg-gray-900 border border-gray-800 rounded-xl p-5 space-y-4">
-          <div>
-            <p className="text-xs text-gray-400 mb-1">
-              Public key (SubjectPublicKeyInfo DER, base64) — copy into your product&#39;s{' '}
-              <code className="text-gray-300">application.yml</code> under{' '}
-              <code className="text-gray-300">app.license.public-keys.{created.keyId}</code>:
+      <>
+        <style>{`
+          .key-copy-btn:hover { color: var(--amber) !important; }
+        `}</style>
+        <div style={{ padding: '32px 32px' }}>
+          <div style={{ paddingBottom: 24, borderBottom: '1px solid var(--bs)', marginBottom: 32 }}>
+            <p style={{ fontSize: 9, letterSpacing: '0.28em', color: 'var(--tm)', marginBottom: 8, textTransform: 'uppercase' }}>
+              Products / New
             </p>
-            <div className="bg-gray-800 rounded-lg px-3 py-2 flex items-start gap-2">
-              <code className="text-xs text-gray-300 flex-1 break-all">{created.publicKeyB64}</code>
+            <h1 style={{ fontSize: 20, fontWeight: 600, color: 'var(--t1)', margin: 0, letterSpacing: '-0.02em' }}>
+              Keypair Generated
+            </h1>
+          </div>
+
+          {/* Success notice */}
+          <div style={{
+            padding: '12px 16px',
+            border: '1px solid rgba(61,214,140,0.2)',
+            background: 'rgba(61,214,140,0.04)',
+            marginBottom: 28,
+            fontSize: 11,
+            color: 'var(--green)',
+            letterSpacing: '0.04em',
+          }}>
+            Product created — Ed25519 keypair generated. Private key encrypted at rest.
+          </div>
+
+          {/* Public key */}
+          <div style={{ marginBottom: 28, maxWidth: 640 }}>
+            <div style={{ fontSize: 9, letterSpacing: '0.22em', color: 'var(--tm)', textTransform: 'uppercase', marginBottom: 10 }}>
+              Public Key — embed in product binary
+            </div>
+            <div style={{ fontSize: 9, color: 'var(--tm)', marginBottom: 10 }}>
+              Copy into{' '}
+              <code style={{ color: 'var(--t2)' }}>application.yml</code>
+              {' '}under{' '}
+              <code style={{ color: 'var(--t2)' }}>app.license.public-keys.{created.keyId}</code>
+            </div>
+            <div style={{
+              background: 'var(--s1)',
+              border: '1px solid var(--bs)',
+              padding: '14px 16px',
+              display: 'flex',
+              gap: 14,
+              alignItems: 'flex-start',
+            }}>
+              <code style={{
+                fontSize: 10,
+                color: 'var(--t2)',
+                flex: 1,
+                wordBreak: 'break-all',
+                lineHeight: 1.75,
+              }}>
+                {created.publicKeyB64}
+              </code>
               <button
                 onClick={() => copy(created.publicKeyB64)}
-                className="text-xs text-indigo-400 hover:text-indigo-300 shrink-0"
+                className="key-copy-btn"
+                style={{
+                  fontFamily: 'inherit',
+                  fontSize: 9,
+                  letterSpacing: '0.2em',
+                  color: copied ? 'var(--green)' : 'var(--t2)',
+                  background: 'none',
+                  border: 'none',
+                  cursor: 'pointer',
+                  textTransform: 'uppercase',
+                  flexShrink: 0,
+                  transition: 'color 0.15s',
+                }}
               >
-                Copy
+                {copied ? 'Copied ✓' : 'Copy'}
               </button>
             </div>
           </div>
 
-          <div className="grid grid-cols-2 gap-3 text-xs">
-            <div>
-              <p className="text-gray-500">Slug</p>
-              <code className="text-gray-300">{created.slug}</code>
-            </div>
-            <div>
-              <p className="text-gray-500">Key ID</p>
-              <code className="text-gray-300">{created.keyId}</code>
-            </div>
+          {/* Meta */}
+          <div style={{
+            display: 'grid',
+            gridTemplateColumns: '1fr 1fr',
+            gap: 16,
+            maxWidth: 320,
+            padding: '16px 0',
+            borderTop: '1px solid var(--bs)',
+            borderBottom: '1px solid var(--bs)',
+            marginBottom: 28,
+          }}>
+            <MetaItem label="Slug" value={created.slug} />
+            <MetaItem label="Key ID" value={created.keyId} />
           </div>
-        </div>
 
-        <button
-          onClick={() => router.push('/products')}
-          className="bg-gray-800 hover:bg-gray-700 text-white text-sm px-4 py-2 rounded-lg transition-colors"
-        >
-          Back to products
-        </button>
-      </div>
+          <button
+            onClick={() => router.push('/products')}
+            style={{
+              fontFamily: 'inherit',
+              fontSize: 10,
+              letterSpacing: '0.2em',
+              color: '#07080d',
+              background: 'var(--amber)',
+              border: 'none',
+              padding: '10px 18px',
+              cursor: 'pointer',
+              textTransform: 'uppercase',
+            }}
+          >
+            ← Back to Products
+          </button>
+        </div>
+      </>
     )
   }
 
   return (
-    <div className="p-8 max-w-lg">
-      <h1 className="text-lg font-semibold text-white mb-6">Add product</h1>
-      <p className="text-sm text-gray-400 mb-6">
-        Adding a product generates an Ed25519 keypair. The private key is encrypted at rest. You&#39;ll embed the public key in your product binary.
-      </p>
+    <>
+      <style>{`
+        .form-input { transition: border-color 0.15s; }
+        .form-input:focus { border-bottom-color: var(--amber) !important; outline: none; }
+        .form-input::placeholder { color: var(--tm); }
+        .form-btn-primary:hover:not(:disabled) { background: var(--amber-d) !important; }
+        .form-btn-cancel:hover { color: var(--t1) !important; }
+      `}</style>
 
-      <form onSubmit={handleSubmit} className="space-y-4">
-        <div>
-          <label className="block text-xs text-gray-400 mb-1">Product name</label>
-          <input
-            type="text"
-            required
-            value={form.name}
-            onChange={(e) => set('name', e.target.value)}
-            placeholder="Handoff"
-            className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-indigo-500"
-          />
-        </div>
-
-        <div>
-          <label className="block text-xs text-gray-400 mb-1">Slug (used in license payload)</label>
-          <input
-            type="text"
-            required
-            pattern="[a-z0-9-]+"
-            value={form.slug}
-            onChange={(e) => set('slug', e.target.value)}
-            placeholder="handoff"
-            className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-sm text-white font-mono focus:outline-none focus:border-indigo-500"
-          />
-        </div>
-
-        <div className="grid grid-cols-2 gap-4">
-          <div>
-            <label className="block text-xs text-gray-400 mb-1">Key ID</label>
-            <input
-              type="text"
-              value={form.keyId}
-              onChange={(e) => set('keyId', e.target.value)}
-              placeholder="v1"
-              className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-sm text-white font-mono focus:outline-none focus:border-indigo-500"
-            />
-          </div>
-          <div>
-            <label className="block text-xs text-gray-400 mb-1">Issuer name (optional)</label>
-            <input
-              type="text"
-              value={form.issuerName}
-              onChange={(e) => set('issuerName', e.target.value)}
-              placeholder="handoff-license-server"
-              className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-indigo-500"
-            />
-          </div>
-        </div>
-
-        {error && (
-          <p className="text-xs text-red-400 bg-red-900/20 border border-red-800 rounded px-3 py-2">
-            {error}
+      <div style={{ padding: '32px 32px 0' }}>
+        {/* Header */}
+        <div style={{ paddingBottom: 24, borderBottom: '1px solid var(--bs)', marginBottom: 32 }}>
+          <p style={{ fontSize: 9, letterSpacing: '0.28em', color: 'var(--tm)', marginBottom: 8, textTransform: 'uppercase' }}>
+            Products / New
           </p>
-        )}
-
-        <div className="flex gap-3 pt-2">
-          <button
-            type="submit"
-            disabled={loading}
-            className="bg-indigo-600 hover:bg-indigo-500 disabled:opacity-50 text-white text-sm px-5 py-2 rounded-lg transition-colors"
-          >
-            {loading ? 'Generating keypair…' : 'Generate keypair & create'}
-          </button>
-          <button
-            type="button"
-            onClick={() => router.back()}
-            className="text-gray-400 hover:text-white text-sm px-4 py-2 transition-colors"
-          >
-            Cancel
-          </button>
+          <h1 style={{ fontSize: 20, fontWeight: 600, color: 'var(--t1)', margin: 0, letterSpacing: '-0.02em' }}>
+            Add Product
+          </h1>
+          <p style={{ fontSize: 11, color: 'var(--t2)', marginTop: 8 }}>
+            Registers a product and generates an Ed25519 keypair. Embed the public key in your binary.
+          </p>
         </div>
-      </form>
+
+        <form onSubmit={handleSubmit} style={{ maxWidth: 440 }}>
+          <Field label="Product Name" required>
+            <input
+              type="text"
+              required
+              value={form.name}
+              onChange={e => set('name', e.target.value)}
+              placeholder="Handoff"
+              className="form-input"
+              style={inputStyle}
+            />
+          </Field>
+
+          <Field label="Slug" hint="used in license payload">
+            <input
+              type="text"
+              required
+              pattern="[a-z0-9-]+"
+              value={form.slug}
+              onChange={e => set('slug', e.target.value)}
+              placeholder="handoff"
+              className="form-input"
+              style={inputStyle}
+            />
+          </Field>
+
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 20, marginBottom: 28 }}>
+            <div>
+              <label style={labelStyle}>Key ID</label>
+              <input
+                type="text"
+                value={form.keyId}
+                onChange={e => set('keyId', e.target.value)}
+                placeholder="v1"
+                className="form-input"
+                style={inputStyle}
+              />
+            </div>
+            <div>
+              <label style={labelStyle}>Issuer Name <span style={{ opacity: 0.6 }}>(optional)</span></label>
+              <input
+                type="text"
+                value={form.issuerName}
+                onChange={e => set('issuerName', e.target.value)}
+                placeholder="handoff-license-server"
+                className="form-input"
+                style={inputStyle}
+              />
+            </div>
+          </div>
+
+          {error && (
+            <div style={{
+              marginBottom: 20,
+              padding: '8px 12px',
+              border: '1px solid rgba(240,96,96,0.25)',
+              fontSize: 11,
+              color: 'var(--red)',
+              background: 'rgba(240,96,96,0.05)',
+            }}>
+              {error}
+            </div>
+          )}
+
+          <div style={{ display: 'flex', gap: 16, alignItems: 'center', paddingTop: 8 }}>
+            <button
+              type="submit"
+              disabled={loading}
+              className="form-btn-primary"
+              style={primaryBtnStyle}
+            >
+              {loading ? 'Generating Keypair…' : 'Generate Keypair & Create →'}
+            </button>
+            <button
+              type="button"
+              onClick={() => router.back()}
+              className="form-btn-cancel"
+              style={cancelBtnStyle}
+            >
+              Cancel
+            </button>
+          </div>
+        </form>
+      </div>
+    </>
+  )
+}
+
+const inputStyle: React.CSSProperties = {
+  width: '100%',
+  background: 'transparent',
+  border: 'none',
+  borderBottom: '1px solid var(--b)',
+  padding: '6px 0 8px',
+  fontSize: 13,
+  color: 'var(--t1)',
+  fontFamily: 'inherit',
+}
+
+const labelStyle: React.CSSProperties = {
+  display: 'block',
+  fontSize: 9,
+  letterSpacing: '0.25em',
+  color: 'var(--tm)',
+  marginBottom: 10,
+  textTransform: 'uppercase',
+}
+
+const primaryBtnStyle: React.CSSProperties = {
+  fontFamily: 'inherit',
+  fontSize: 10,
+  letterSpacing: '0.22em',
+  fontWeight: 600,
+  color: '#07080d',
+  background: 'var(--amber)',
+  border: 'none',
+  padding: '11px 20px',
+  cursor: 'pointer',
+  textTransform: 'uppercase',
+  transition: 'background 0.12s',
+}
+
+const cancelBtnStyle: React.CSSProperties = {
+  fontFamily: 'inherit',
+  fontSize: 10,
+  letterSpacing: '0.18em',
+  color: 'var(--tm)',
+  background: 'none',
+  border: 'none',
+  cursor: 'pointer',
+  textTransform: 'uppercase',
+  transition: 'color 0.1s',
+}
+
+function Field({ label, hint, required, children }: {
+  label: string; hint?: string; required?: boolean; children: React.ReactNode
+}) {
+  return (
+    <div style={{ marginBottom: 28 }}>
+      <label style={{
+        display: 'flex',
+        alignItems: 'baseline',
+        gap: 8,
+        fontSize: 9,
+        letterSpacing: '0.25em',
+        color: 'var(--tm)',
+        marginBottom: 10,
+        textTransform: 'uppercase',
+      }}>
+        {label}
+        {hint && <span style={{ letterSpacing: '0.1em', opacity: 0.6 }}>({hint})</span>}
+        {required && <span style={{ color: 'var(--amber)', fontSize: 10 }}>*</span>}
+      </label>
+      {children}
+    </div>
+  )
+}
+
+function MetaItem({ label, value }: { label: string; value: string }) {
+  return (
+    <div>
+      <div style={{ fontSize: 9, letterSpacing: '0.2em', color: 'var(--tm)', textTransform: 'uppercase', marginBottom: 4 }}>
+        {label}
+      </div>
+      <code style={{ fontSize: 12, color: 'var(--t2)' }}>{value}</code>
     </div>
   )
 }

@@ -120,3 +120,29 @@ export function signHeartbeatResponse(responseBody: object, privateKeyEnc: strin
   const bytes = canonicalJson(responseBody)
   return signLicense(bytes, privateKeyEnc)
 }
+
+// ── License text parsing / verification ──────────────────────────────────────
+
+// Parse the payload from a license text without verifying the signature.
+// License text format: base64url(canonicalJson(payload)).base64url(sig)
+export function parseLicensePayload(licenseText: string): Record<string, unknown> {
+  const dot = licenseText.lastIndexOf('.')
+  if (dot < 1) throw new Error('Invalid license format: missing payload.signature separator')
+  const payloadBytes = Buffer.from(licenseText.substring(0, dot).trim(), 'base64url')
+  return JSON.parse(payloadBytes.toString('utf-8')) as Record<string, unknown>
+}
+
+// Verify an Ed25519 license signature using the product's public key (base64 SPKI DER).
+export function verifyLicenseText(licenseText: string, publicKeyB64: string): boolean {
+  try {
+    const dot = licenseText.lastIndexOf('.')
+    if (dot < 1) return false
+    const payloadBytes = Buffer.from(licenseText.substring(0, dot).trim(), 'base64url')
+    const sig = Buffer.from(licenseText.substring(dot + 1).trim(), 'base64url')
+    const pubDer = Buffer.from(publicKeyB64, 'base64')
+    const publicKey = createPublicKey({ key: pubDer, format: 'der', type: 'spki' })
+    return cryptoVerify(null, payloadBytes, publicKey, sig)
+  } catch {
+    return false
+  }
+}

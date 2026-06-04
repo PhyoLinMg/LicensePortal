@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 
 export default function LoginPage() {
@@ -9,6 +9,12 @@ export default function LoginPage() {
   const [password, setPassword] = useState('')
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
+  const [mounted, setMounted] = useState(false)
+
+  useEffect(() => {
+    const t = setTimeout(() => setMounted(true), 80)
+    return () => clearTimeout(t)
+  }, [])
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
@@ -24,7 +30,7 @@ export default function LoginPage() {
         router.push('/licenses')
       } else {
         const data = await res.json()
-        setError(data.error ?? 'Login failed')
+        setError(data.error ?? 'Authentication failed')
       }
     } catch {
       setError('Network error')
@@ -34,53 +40,183 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="flex items-center justify-center min-h-screen">
-      <div className="w-full max-w-sm">
-        <div className="bg-gray-900 border border-gray-800 rounded-xl p-8">
-          <h1 className="text-xl font-semibold text-white mb-1">License Server</h1>
-          <p className="text-sm text-gray-400 mb-6">Admin access only</p>
+    <>
+      <style>{`
+        .lf-input { transition: border-color 0.15s; }
+        .lf-input:focus { border-bottom-color: var(--amber) !important; outline: none; }
+        .lf-input::placeholder { color: var(--tm); }
+        .lf-btn:hover:not(:disabled) { background: var(--amber-d) !important; }
+        .lf-btn:disabled { opacity: 0.6; cursor: wait; }
+      `}</style>
 
-          <form onSubmit={handleSubmit} className="space-y-4">
-            <div>
-              <label className="block text-xs text-gray-400 mb-1">Email</label>
+      <div style={{
+        minHeight: '100vh',
+        display: 'flex',
+        flexDirection: 'column',
+        alignItems: 'center',
+        justifyContent: 'center',
+        padding: '40px 20px',
+        background: 'radial-gradient(ellipse 80% 60% at 50% -10%, rgba(200,160,48,0.06) 0%, transparent 70%)',
+      }}>
+
+        {/* Wordmark */}
+        <div style={{
+          textAlign: 'center',
+          marginBottom: 52,
+          opacity: mounted ? 1 : 0,
+          transform: mounted ? 'none' : 'translateY(14px)',
+          transition: 'opacity 0.55s ease, transform 0.55s ease',
+        }}>
+          <div style={{ fontSize: 9, letterSpacing: '0.45em', color: 'var(--tm)', marginBottom: 18 }}>
+            RESTRICTED SYSTEM
+          </div>
+          <div style={{ fontSize: 34, fontWeight: 600, letterSpacing: '-0.025em', color: 'var(--t1)', lineHeight: 1.1 }}>
+            LICENSE<br />
+            <span style={{ color: 'var(--amber)' }}>SERVER</span>
+            <span style={{ color: 'var(--amber)', animation: 'blink 1.1s step-end infinite' }}>_</span>
+          </div>
+        </div>
+
+        {/* Form card */}
+        <div style={{
+          width: '100%',
+          maxWidth: 360,
+          opacity: mounted ? 1 : 0,
+          transform: mounted ? 'none' : 'translateY(14px)',
+          transition: 'opacity 0.55s ease 0.12s, transform 0.55s ease 0.12s',
+        }}>
+          {/* Top rule */}
+          <div style={{
+            height: 1,
+            background: 'linear-gradient(90deg, transparent, var(--amber) 30%, var(--amber) 70%, transparent)',
+            marginBottom: 36,
+            opacity: 0.6,
+          }} />
+
+          <form onSubmit={handleSubmit}>
+            {/* Email */}
+            <div style={{ marginBottom: 30 }}>
+              <label style={{
+                display: 'block',
+                fontSize: 9,
+                letterSpacing: '0.28em',
+                color: 'var(--tm)',
+                marginBottom: 10,
+                textTransform: 'uppercase',
+              }}>
+                Email Address
+              </label>
               <input
                 type="email"
                 required
                 value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-indigo-500"
+                onChange={e => setEmail(e.target.value)}
                 placeholder="admin@yourcompany.com"
+                className="lf-input"
+                style={{
+                  width: '100%',
+                  background: 'transparent',
+                  border: 'none',
+                  borderBottom: '1px solid var(--b)',
+                  padding: '6px 0 8px',
+                  fontSize: 13,
+                  color: 'var(--t1)',
+                  fontFamily: 'inherit',
+                }}
               />
             </div>
 
-            <div>
-              <label className="block text-xs text-gray-400 mb-1">Password</label>
+            {/* Password */}
+            <div style={{ marginBottom: 36 }}>
+              <label style={{
+                display: 'block',
+                fontSize: 9,
+                letterSpacing: '0.28em',
+                color: 'var(--tm)',
+                marginBottom: 10,
+                textTransform: 'uppercase',
+              }}>
+                Password
+              </label>
               <input
                 type="password"
                 required
                 value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-indigo-500"
+                onChange={e => setPassword(e.target.value)}
                 placeholder="••••••••"
+                className="lf-input"
+                style={{
+                  width: '100%',
+                  background: 'transparent',
+                  border: 'none',
+                  borderBottom: '1px solid var(--b)',
+                  padding: '6px 0 8px',
+                  fontSize: 14,
+                  color: 'var(--t1)',
+                  fontFamily: 'inherit',
+                  letterSpacing: '0.12em',
+                }}
               />
             </div>
 
             {error && (
-              <p className="text-xs text-red-400 bg-red-900/20 border border-red-800 rounded px-3 py-2">
+              <div style={{
+                marginBottom: 20,
+                padding: '8px 12px',
+                border: '1px solid rgba(240,96,96,0.25)',
+                fontSize: 11,
+                color: 'var(--red)',
+                letterSpacing: '0.04em',
+                background: 'rgba(240,96,96,0.05)',
+              }}>
                 {error}
-              </p>
+              </div>
             )}
 
             <button
               type="submit"
               disabled={loading}
-              className="w-full bg-indigo-600 hover:bg-indigo-500 disabled:opacity-50 text-white rounded-lg py-2 text-sm font-medium transition-colors"
+              className="lf-btn"
+              style={{
+                width: '100%',
+                background: 'var(--amber)',
+                border: 'none',
+                padding: '13px',
+                fontSize: 10,
+                fontWeight: 600,
+                letterSpacing: '0.35em',
+                color: '#07080d',
+                cursor: 'pointer',
+                fontFamily: 'inherit',
+                textTransform: 'uppercase',
+                transition: 'background 0.12s',
+              }}
             >
-              {loading ? 'Signing in…' : 'Sign in'}
+              {loading ? 'Authenticating…' : 'Authenticate'}
             </button>
           </form>
+
+          {/* Bottom rule */}
+          <div style={{
+            height: 1,
+            background: 'linear-gradient(90deg, transparent, var(--b), transparent)',
+            marginTop: 36,
+          }} />
+        </div>
+
+        {/* Footer */}
+        <div style={{
+          marginTop: 40,
+          fontSize: 9,
+          letterSpacing: '0.22em',
+          color: 'var(--tm)',
+          textTransform: 'uppercase',
+          opacity: mounted ? 1 : 0,
+          transition: 'opacity 0.55s ease 0.28s',
+        }}>
+          Authorized Personnel Only
         </div>
       </div>
-    </div>
+    </>
   )
 }

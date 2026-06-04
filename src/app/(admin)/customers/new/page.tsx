@@ -30,67 +30,162 @@ export default function NewCustomerPage() {
   }
 
   return (
-    <div className="p-8 max-w-lg">
-      <h1 className="text-lg font-semibold text-white mb-6">Add customer</h1>
+    <>
+      <style>{`
+        .form-input { transition: border-color 0.15s; }
+        .form-input:focus { border-bottom-color: var(--amber) !important; outline: none; }
+        .form-input::placeholder { color: var(--tm); }
+        .form-btn-primary:hover:not(:disabled) { background: var(--amber-d) !important; }
+        .form-btn-cancel:hover { color: var(--t1) !important; }
+      `}</style>
 
-      <form onSubmit={handleSubmit} className="space-y-4">
-        <div>
-          <label className="block text-xs text-gray-400 mb-1">Name</label>
-          <input
-            type="text"
-            required
-            value={form.name}
-            onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))}
-            placeholder="Acme MSP"
-            className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-indigo-500"
-          />
-        </div>
-
-        <div>
-          <label className="block text-xs text-gray-400 mb-1">Email (optional)</label>
-          <input
-            type="email"
-            value={form.email}
-            onChange={(e) => setForm((f) => ({ ...f, email: e.target.value }))}
-            placeholder="billing@acme.com"
-            className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-indigo-500"
-          />
-        </div>
-
-        <div>
-          <label className="block text-xs text-gray-400 mb-1">Notes (optional)</label>
-          <textarea
-            value={form.notes}
-            onChange={(e) => setForm((f) => ({ ...f, notes: e.target.value }))}
-            rows={3}
-            placeholder="Stripe customer ID, contract details, etc."
-            className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-indigo-500"
-          />
-        </div>
-
-        {error && (
-          <p className="text-xs text-red-400 bg-red-900/20 border border-red-800 rounded px-3 py-2">
-            {error}
+      <div style={{ padding: '32px 32px 0' }}>
+        {/* Header */}
+        <div style={{ paddingBottom: 24, borderBottom: '1px solid var(--bs)', marginBottom: 36 }}>
+          <p style={{ fontSize: 9, letterSpacing: '0.28em', color: 'var(--tm)', marginBottom: 8, textTransform: 'uppercase' }}>
+            Customers / New
           </p>
-        )}
-
-        <div className="flex gap-3 pt-2">
-          <button
-            type="submit"
-            disabled={loading}
-            className="bg-indigo-600 hover:bg-indigo-500 disabled:opacity-50 text-white text-sm px-5 py-2 rounded-lg transition-colors"
-          >
-            {loading ? 'Creating…' : 'Create customer'}
-          </button>
-          <button
-            type="button"
-            onClick={() => router.back()}
-            className="text-gray-400 hover:text-white text-sm px-4 py-2 transition-colors"
-          >
-            Cancel
-          </button>
+          <h1 style={{ fontSize: 20, fontWeight: 600, color: 'var(--t1)', margin: 0, letterSpacing: '-0.02em' }}>
+            Add Customer
+          </h1>
         </div>
-      </form>
+
+        <form onSubmit={handleSubmit} style={{ maxWidth: 440 }}>
+          <Field label="Company / Customer Name" required>
+            <input
+              type="text"
+              required
+              value={form.name}
+              onChange={e => setForm(f => ({ ...f, name: e.target.value }))}
+              placeholder="Acme MSP"
+              className="form-input"
+              style={inputStyle}
+            />
+          </Field>
+
+          <Field label="Email Address" hint="optional">
+            <input
+              type="email"
+              value={form.email}
+              onChange={e => setForm(f => ({ ...f, email: e.target.value }))}
+              placeholder="billing@acme.com"
+              className="form-input"
+              style={inputStyle}
+            />
+          </Field>
+
+          <Field label="Notes" hint="optional">
+            <textarea
+              value={form.notes}
+              onChange={e => setForm(f => ({ ...f, notes: e.target.value }))}
+              rows={3}
+              placeholder="Stripe customer ID, contract details, renewal date…"
+              className="form-input"
+              style={{ ...inputStyle, resize: 'vertical', padding: '8px 0' }}
+            />
+          </Field>
+
+          {error && <ErrorMsg>{error}</ErrorMsg>}
+
+          <div style={{ display: 'flex', gap: 16, alignItems: 'center', paddingTop: 8 }}>
+            <button
+              type="submit"
+              disabled={loading}
+              className="form-btn-primary"
+              style={primaryBtnStyle}
+            >
+              {loading ? 'Creating…' : 'Create Customer →'}
+            </button>
+            <button
+              type="button"
+              onClick={() => router.back()}
+              className="form-btn-cancel"
+              style={cancelBtnStyle}
+            >
+              Cancel
+            </button>
+          </div>
+        </form>
+      </div>
+    </>
+  )
+}
+
+const inputStyle: React.CSSProperties = {
+  width: '100%',
+  background: 'transparent',
+  border: 'none',
+  borderBottom: '1px solid var(--b)',
+  padding: '6px 0 8px',
+  fontSize: 13,
+  color: 'var(--t1)',
+  fontFamily: 'inherit',
+}
+
+const primaryBtnStyle: React.CSSProperties = {
+  fontFamily: 'inherit',
+  fontSize: 10,
+  letterSpacing: '0.22em',
+  fontWeight: 600,
+  color: '#07080d',
+  background: 'var(--amber)',
+  border: 'none',
+  padding: '11px 20px',
+  cursor: 'pointer',
+  textTransform: 'uppercase',
+  transition: 'background 0.12s',
+}
+
+const cancelBtnStyle: React.CSSProperties = {
+  fontFamily: 'inherit',
+  fontSize: 10,
+  letterSpacing: '0.18em',
+  color: 'var(--tm)',
+  background: 'none',
+  border: 'none',
+  cursor: 'pointer',
+  textTransform: 'uppercase',
+  transition: 'color 0.1s',
+}
+
+function Field({ label, hint, required, children }: {
+  label: string
+  hint?: string
+  required?: boolean
+  children: React.ReactNode
+}) {
+  return (
+    <div style={{ marginBottom: 28 }}>
+      <label style={{
+        display: 'flex',
+        alignItems: 'baseline',
+        gap: 8,
+        fontSize: 9,
+        letterSpacing: '0.25em',
+        color: 'var(--tm)',
+        marginBottom: 10,
+        textTransform: 'uppercase',
+      }}>
+        {label}
+        {hint && <span style={{ letterSpacing: '0.1em', opacity: 0.6 }}>({hint})</span>}
+        {required && <span style={{ color: 'var(--amber)', fontSize: 10 }}>*</span>}
+      </label>
+      {children}
+    </div>
+  )
+}
+
+function ErrorMsg({ children }: { children: React.ReactNode }) {
+  return (
+    <div style={{
+      marginBottom: 20,
+      padding: '8px 12px',
+      border: '1px solid rgba(240,96,96,0.25)',
+      fontSize: 11,
+      color: 'var(--red)',
+      background: 'rgba(240,96,96,0.05)',
+    }}>
+      {children}
     </div>
   )
 }

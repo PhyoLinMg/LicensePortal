@@ -2,6 +2,7 @@ import Link from 'next/link'
 import { db } from '@/lib/db'
 import { isAuthenticated } from '@/lib/auth'
 import { redirect } from 'next/navigation'
+import { statusColor, tierLabel } from './_lib/format'
 
 export default async function LicensesPage() {
   if (!(await isAuthenticated())) redirect('/login')
@@ -15,59 +16,126 @@ export default async function LicensesPage() {
     },
   })
 
+  const active = licenses.filter(l => l.status === 'active').length
+  const revoked = licenses.filter(l => l.status === 'revoked').length
+
   return (
-    <div className="p-8">
-      <div className="flex items-center justify-between mb-6">
-        <h1 className="text-lg font-semibold text-white">Licenses</h1>
-        <Link
-          href="/licenses/new"
-          className="bg-indigo-600 hover:bg-indigo-500 text-white text-sm px-4 py-2 rounded-lg transition-colors"
-        >
-          Issue license
-        </Link>
+    <>
+      <style>{`
+        .lic-row:hover { background: var(--s2) !important; }
+      `}</style>
+      <div style={{ padding: '32px 32px 0' }}>
+        {/* Header */}
+        <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', paddingBottom: 24, borderBottom: '1px solid var(--bs)' }}>
+          <div>
+            <p style={{ fontSize: 9, letterSpacing: '0.28em', color: 'var(--tm)', marginBottom: 8, textTransform: 'uppercase' }}>
+              License Portal
+            </p>
+            <h1 style={{ fontSize: 20, fontWeight: 600, color: 'var(--t1)', margin: 0, letterSpacing: '-0.02em' }}>
+              Licenses
+            </h1>
+          </div>
+          <Link
+            href="/licenses/new"
+            style={{
+              fontSize: 10,
+              letterSpacing: '0.2em',
+              color: '#07080d',
+              background: 'var(--amber)',
+              padding: '9px 18px',
+              textDecoration: 'none',
+              textTransform: 'uppercase',
+              fontWeight: 600,
+              transition: 'background 0.1s',
+            }}
+          >
+            Issue License →
+          </Link>
+        </div>
+
+        {/* Stats */}
+        <div style={{ display: 'flex', gap: 32, padding: '18px 0', borderBottom: '1px solid var(--bs)' }}>
+          <Stat label="Total" value={licenses.length} />
+          <Stat label="Active" value={active} color="var(--green)" />
+          <Stat label="Revoked" value={revoked} color="var(--red)" />
+        </div>
       </div>
 
-      {licenses.length === 0 ? (
-        <p className="text-gray-500 text-sm">No licenses issued yet.</p>
-      ) : (
-        <div className="space-y-2">
-          {licenses.map((l) => (
+      {/* List */}
+      <div style={{ padding: '16px 0' }}>
+        {licenses.length === 0 ? (
+          <div style={{ padding: '48px 32px', fontSize: 11, color: 'var(--tm)', letterSpacing: '0.15em' }}>
+            No licenses issued yet.
+          </div>
+        ) : (
+          licenses.map((l) => (
             <Link
               key={l.id}
               href={`/licenses/${l.id}`}
-              className="block bg-gray-900 border border-gray-800 hover:border-gray-700 rounded-xl px-5 py-4 transition-colors"
+              className="lic-row"
+              style={{
+                display: 'block',
+                padding: '14px 32px',
+                borderLeft: `3px solid ${statusColor(l.status)}`,
+                borderBottom: '1px solid var(--bs)',
+                textDecoration: 'none',
+                transition: 'background 0.1s',
+              }}
             >
-              <div className="flex items-start justify-between gap-4">
-                <div>
-                  <div className="flex items-center gap-2 mb-1">
-                    <span className="text-sm font-medium text-white">{l.customer.name}</span>
-                    <span className="text-xs text-gray-500">·</span>
-                    <span className="text-xs text-gray-400">{l.product.name}</span>
-                    <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${
-                      l.tier === 'enterprise' ? 'bg-violet-900 text-violet-300' :
-                      l.tier === 'pro' ? 'bg-blue-900 text-blue-300' :
-                      'bg-gray-800 text-gray-400'
-                    }`}>
-                      {l.tier}
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 16 }}>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ display: 'flex', alignItems: 'baseline', gap: 10, marginBottom: 4 }}>
+                    <span style={{ fontSize: 13, fontWeight: 500, color: 'var(--t1)' }}>
+                      {l.customer.name}
+                    </span>
+                    <span style={{ fontSize: 9, color: 'var(--tm)' }}>·</span>
+                    <span style={{ fontSize: 11, color: 'var(--t2)' }}>{l.product.name}</span>
+                    <span style={{
+                      fontSize: 8,
+                      letterSpacing: '0.18em',
+                      color: 'var(--tm)',
+                      border: '1px solid var(--b)',
+                      padding: '1px 5px',
+                      textTransform: 'uppercase',
+                    }}>
+                      {tierLabel(l.tier)}
                     </span>
                   </div>
-                  <p className="text-xs text-gray-500">
-                    Expires {new Date(l.expiresAt).toLocaleDateString()} ·{' '}
-                    {l._count.instances} instance{l._count.instances !== 1 ? 's' : ''}
-                  </p>
+                  <div style={{ display: 'flex', gap: 16, fontSize: 10, color: 'var(--tm)' }}>
+                    <span>Expires {new Date(l.expiresAt).toLocaleDateString('en-CA')}</span>
+                    <span>{l._count.instances} instance{l._count.instances !== 1 ? 's' : ''}</span>
+                    <span style={{ color: 'var(--tm)', fontFamily: 'inherit' }}>
+                      {l.id.slice(0, 8)}…
+                    </span>
+                  </div>
                 </div>
-                <span className={`text-xs px-2 py-1 rounded-md font-medium ${
-                  l.status === 'active' ? 'bg-green-900/50 text-green-400' :
-                  l.status === 'revoked' ? 'bg-red-900/50 text-red-400' :
-                  'bg-gray-800 text-gray-400'
-                }`}>
+                <div style={{
+                  fontSize: 9,
+                  letterSpacing: '0.18em',
+                  color: statusColor(l.status),
+                  textTransform: 'uppercase',
+                  flexShrink: 0,
+                }}>
                   {l.status}
-                </span>
+                </div>
               </div>
             </Link>
-          ))}
-        </div>
-      )}
+          ))
+        )}
+      </div>
+    </>
+  )
+}
+
+function Stat({ label, value, color = 'var(--t2)' }: { label: string; value: number; color?: string }) {
+  return (
+    <div>
+      <div style={{ fontSize: 9, letterSpacing: '0.2em', color: 'var(--tm)', textTransform: 'uppercase', marginBottom: 3 }}>
+        {label}
+      </div>
+      <div style={{ fontSize: 22, fontWeight: 600, color, letterSpacing: '-0.03em' }}>
+        {value}
+      </div>
     </div>
   )
 }

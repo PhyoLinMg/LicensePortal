@@ -2,6 +2,7 @@ import { NextRequest } from 'next/server'
 import { db } from '@/lib/db'
 import { canonicalJson, verifyInstanceSignature, signHeartbeatResponse } from '@/lib/crypto'
 import { toRfc3339 } from '@/lib/license'
+import { buildEnforcementInfo } from '@/lib/enforce'
 import type { Prisma } from '@prisma/client'
 
 // POST /api/v1/heartbeat
@@ -49,6 +50,7 @@ export async function POST(req: NextRequest) {
       status: 'revoked',
       server_time: toRfc3339(new Date()),
       new_license: null,
+      enforcement: buildEnforcementInfo(license),
     })
   }
 
@@ -76,9 +78,9 @@ export async function POST(req: NextRequest) {
       return hbError(400, 'replay_rejected')
     }
 
-    // Verify instance signature (reconstruct payload without 'signature' field)
+    // Verify instance signature (reconstruct payload without 'signature'/'instance_public_key')
     if (instance.publicKey) {
-      const { signature: _sig, ...toSign } = body
+      const { signature: _sig, instance_public_key: _ipk, ...toSign } = body
       const payloadBytes = canonicalJson(toSign)
       const valid = verifyInstanceSignature(payloadBytes, signature as string, instance.publicKey)
       if (!valid) return hbError(401, 'invalid_signature')
@@ -107,6 +109,7 @@ export async function POST(req: NextRequest) {
     status: 'ok',
     server_time: toRfc3339(new Date()),
     new_license: null,
+    enforcement: buildEnforcementInfo(license),
   })
 }
 
