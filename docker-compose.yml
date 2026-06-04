@@ -7,6 +7,8 @@ services:
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
     volumes:
       - pgdata:/var/lib/postgresql/data
+    networks:
+      - db
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-postgres} -d ${POSTGRES_DB:-license_server}"]
       interval: 5s
@@ -19,7 +21,7 @@ services:
       postgres:
         condition: service_healthy
     environment:
-      DATABASE_URL: ${DATABASE_URL:-postgresql://postgres:postgres@postgres:5432/license_server}
+      DATABASE_URL: postgresql://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-postgres}@postgres:5432/${POSTGRES_DB:-license_server}
       KEK_BASE64: ${KEK_BASE64}
       JWT_SECRET: ${JWT_SECRET}
       ADMIN_EMAIL: ${ADMIN_EMAIL}
@@ -30,12 +32,20 @@ services:
       HANDOFF_INTERNAL_URL: ${HANDOFF_INTERNAL_URL:-}
     ports:
       - "3001:3001"
+    networks:
+      - db
+      - web
     healthcheck:
       test: ["CMD-SHELL", "curl -f http://localhost:3001/login || exit 1"]
       interval: 10s
       timeout: 5s
       retries: 12
       start_period: 40s
+
+networks:
+  db:
+    internal: true
+  web:
 
 volumes:
   pgdata:
