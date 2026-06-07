@@ -478,7 +478,19 @@ docker compose pull
 docker compose up -d
 ```
 
-The entrypoint re-runs `prisma db push` on startup, applying any schema changes automatically.
+The entrypoint runs `prisma migrate deploy` on startup, applying any pending migrations.
+
+> **One-time step for deployments that ran v0.1.x (before migrations were introduced):**
+> Those deployments created schema via `prisma db push` and have no `_prisma_migrations` history.
+> Before upgrading, baseline the initial migration so Prisma does not try to recreate existing tables:
+>
+> ```bash
+> docker compose exec portal-ui npx prisma migrate resolve \
+>   --applied 0001_initial \
+>   --schema=./prisma/schema.prisma
+> ```
+>
+> Run this once, then `docker compose up -d`. Future upgrades need no manual step.
 
 ### Backups
 

@@ -73,6 +73,7 @@ model Instance {
   license        License  @relation(fields: [licenseId], references: [id])
 
   @@index([licenseId])
+  @@index([lastSeenAt])
 }
 
 model AuditEvent {
@@ -84,5 +85,6 @@ model AuditEvent {
   license   License? @relation(fields: [licenseId], references: [id])
 
   @@index([licenseId])
+  @@index([type])
   @@index([createdAt])
 }

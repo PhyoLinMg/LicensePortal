@@ -2,6 +2,8 @@ import { NextRequest } from 'next/server'
 import { db } from '@/lib/db'
 import { parseLicensePayload, verifyLicenseText } from '@/lib/crypto'
 import { buildEnforcementInfo } from '@/lib/enforce'
+import { getClientIp } from '@/lib/request'
+import { allow } from '@/lib/ratelimit'
 import type { Prisma } from '@prisma/client'
 
 // POST /api/v1/validate
@@ -13,6 +15,12 @@ import type { Prisma } from '@prisma/client'
 // Response: { state, license_id, tier, features, limits, expires_at,
 //             grace_period_days, heartbeat_url, new_license }
 export async function POST(req: NextRequest) {
+  const ip = getClientIp(req) ?? 'unknown'
+  // 30 requests per minute per IP
+  if (!allow(`validate:${ip}`, 30, 60_000)) {
+    return Response.json({ error: 'rate_limited' }, { status: 429 })
+  }
+
   let body: { license_text?: string }
   try {
     body = await req.json()
@@ -59,7 +67,7 @@ export async function POST(req: NextRequest) {
     data: {
       licenseId: license.id,
       type: 'VALIDATE',
-      payload: { client_ip: req.headers.get('x-forwarded-for') } as Prisma.InputJsonValue,
+      payload: { client_ip: getClientIp(req) } as Prisma.InputJsonValue,
     },
   })
 

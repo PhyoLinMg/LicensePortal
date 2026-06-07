@@ -27,6 +27,9 @@ let gateCache: { until: number; denial: GateDenial | null } | null = null
 
 export async function gate(path: string[]): Promise<NextResponse | null> {
   if (!upstreamUrl()) return null  // proxy not configured — let forward() return 404
+  if (path.some((seg) => seg === '..' || seg === '.')) {
+    return NextResponse.json({ error: 'INVALID_PATH' }, { status: 400 })
+  }
   const joined = path.join('/')
   if (GATE_BYPASS_PREFIXES.some((p) => joined.startsWith(p))) return null
 
