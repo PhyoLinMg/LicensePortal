@@ -2,9 +2,9 @@ import AdminNav from './AdminNav'
 
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
   return (
-    <div style={{ display: 'flex', minHeight: '100vh' }}>
+    <div className="flex min-h-screen">
       <AdminNav />
-      <main style={{ flex: 1, overflow: 'auto' }}>{children}</main>
+      <main className="flex-1 overflow-auto">{children}</main>
     </div>
   )
 }

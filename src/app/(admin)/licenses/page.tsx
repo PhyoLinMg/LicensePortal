@@ -2,7 +2,7 @@ import Link from 'next/link'
 import { db } from '@/lib/db'
 import { isAuthenticated } from '@/lib/auth'
 import { redirect } from 'next/navigation'
-import { statusColor, tierLabel } from './_lib/format'
+import { statusClass, statusBorderClass, tierLabel } from './_lib/format'
 
 export default async function LicensesPage() {
   if (!(await isAuthenticated())) redirect('/login')
@@ -21,101 +21,57 @@ export default async function LicensesPage() {
 
   return (
     <>
-      <style>{`
-        .lic-row:hover { background: var(--s2) !important; }
-      `}</style>
-      <div style={{ padding: '32px 32px 0' }}>
+      <div className="px-8 pt-8">
         {/* Header */}
-        <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', paddingBottom: 24, borderBottom: '1px solid var(--bs)' }}>
+        <div className="flex items-end justify-between pb-6 bdb">
           <div>
-            <p style={{ fontSize: 9, letterSpacing: '0.28em', color: 'var(--tm)', marginBottom: 8, textTransform: 'uppercase' }}>
-              License Portal
-            </p>
-            <h1 style={{ fontSize: 20, fontWeight: 600, color: 'var(--t1)', margin: 0, letterSpacing: '-0.02em' }}>
-              Licenses
-            </h1>
+            <p className="text-[9px] tracking-[0.28em] fg-muted mb-2 uppercase">License Portal</p>
+            <h1 className="text-[20px] font-semibold fg-t1 m-0 tracking-[-0.02em]">Licenses</h1>
           </div>
           <Link
             href="/licenses/new"
-            style={{
-              fontSize: 10,
-              letterSpacing: '0.2em',
-              color: '#07080d',
-              background: 'var(--amber)',
-              padding: '9px 18px',
-              textDecoration: 'none',
-              textTransform: 'uppercase',
-              fontWeight: 600,
-              transition: 'background 0.1s',
-            }}
+            className="text-[10px] tracking-[0.2em] fg-dark bg-amber px-[18px] py-[9px] no-underline uppercase font-semibold transition-[background] duration-100"
           >
             Issue License →
           </Link>
         </div>
 
         {/* Stats */}
-        <div style={{ display: 'flex', gap: 32, padding: '18px 0', borderBottom: '1px solid var(--bs)' }}>
+        <div className="flex gap-8 py-[18px] bdb">
           <Stat label="Total" value={licenses.length} />
-          <Stat label="Active" value={active} color="var(--green)" />
-          <Stat label="Revoked" value={revoked} color="var(--red)" />
+          <Stat label="Active" value={active} colorCls="fg-green" />
+          <Stat label="Revoked" value={revoked} colorCls="fg-red" />
         </div>
       </div>
 
       {/* List */}
-      <div style={{ padding: '16px 0' }}>
+      <div className="py-4">
         {licenses.length === 0 ? (
-          <div style={{ padding: '48px 32px', fontSize: 11, color: 'var(--tm)', letterSpacing: '0.15em' }}>
-            No licenses issued yet.
-          </div>
+          <div className="px-8 py-12 text-[11px] fg-muted tracking-[0.15em]">No licenses issued yet.</div>
         ) : (
           licenses.map((l) => (
             <Link
               key={l.id}
               href={`/licenses/${l.id}`}
-              className="lic-row"
-              style={{
-                display: 'block',
-                padding: '14px 32px',
-                borderLeft: `3px solid ${statusColor(l.status)}`,
-                borderBottom: '1px solid var(--bs)',
-                textDecoration: 'none',
-                transition: 'background 0.1s',
-              }}
+              className={`lic-row block px-8 py-3.5 ${statusBorderClass(l.status)} bdb no-underline transition-[background] duration-100`}
             >
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 16 }}>
-                <div style={{ flex: 1, minWidth: 0 }}>
-                  <div style={{ display: 'flex', alignItems: 'baseline', gap: 10, marginBottom: 4 }}>
-                    <span style={{ fontSize: 13, fontWeight: 500, color: 'var(--t1)' }}>
-                      {l.customer.name}
-                    </span>
-                    <span style={{ fontSize: 9, color: 'var(--tm)' }}>·</span>
-                    <span style={{ fontSize: 11, color: 'var(--t2)' }}>{l.product.name}</span>
-                    <span style={{
-                      fontSize: 8,
-                      letterSpacing: '0.18em',
-                      color: 'var(--tm)',
-                      border: '1px solid var(--b)',
-                      padding: '1px 5px',
-                      textTransform: 'uppercase',
-                    }}>
+              <div className="flex items-center justify-between gap-4">
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-baseline gap-2.5 mb-1">
+                    <span className="text-[13px] font-medium fg-t1">{l.customer.name}</span>
+                    <span className="text-[9px] fg-muted">·</span>
+                    <span className="text-[11px] fg-t2">{l.product.name}</span>
+                    <span className="text-[8px] tracking-[0.18em] fg-muted bd-b px-[5px] py-px uppercase">
                       {tierLabel(l.tier)}
                     </span>
                   </div>
-                  <div style={{ display: 'flex', gap: 16, fontSize: 10, color: 'var(--tm)' }}>
+                  <div className="flex gap-4 text-[10px] fg-muted">
                     <span>Expires {new Date(l.expiresAt).toLocaleDateString('en-CA')}</span>
                     <span>{l._count.instances} instance{l._count.instances !== 1 ? 's' : ''}</span>
-                    <span style={{ color: 'var(--tm)', fontFamily: 'inherit' }}>
-                      {l.id.slice(0, 8)}…
-                    </span>
+                    <span className="font-[inherit]">{l.id.slice(0, 8)}…</span>
                   </div>
                 </div>
-                <div style={{
-                  fontSize: 9,
-                  letterSpacing: '0.18em',
-                  color: statusColor(l.status),
-                  textTransform: 'uppercase',
-                  flexShrink: 0,
-                }}>
+                <div className={`text-[9px] tracking-[0.18em] ${statusClass(l.status)} uppercase shrink-0`}>
                   {l.status}
                 </div>
               </div>
@@ -127,15 +83,11 @@ export default async function LicensesPage() {
   )
 }
 
-function Stat({ label, value, color = 'var(--t2)' }: { label: string; value: number; color?: string }) {
+function Stat({ label, value, colorCls = 'fg-t2' }: { label: string; value: number; colorCls?: string }) {
   return (
     <div>
-      <div style={{ fontSize: 9, letterSpacing: '0.2em', color: 'var(--tm)', textTransform: 'uppercase', marginBottom: 3 }}>
-        {label}
-      </div>
-      <div style={{ fontSize: 22, fontWeight: 600, color, letterSpacing: '-0.03em' }}>
-        {value}
-      </div>
+      <div className="text-[9px] tracking-[0.2em] fg-muted uppercase mb-[3px]">{label}</div>
+      <div className={`text-[22px] font-semibold ${colorCls} tracking-[-0.03em]`}>{value}</div>
     </div>
   )
 }

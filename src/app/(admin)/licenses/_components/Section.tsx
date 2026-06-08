@@ -2,16 +2,8 @@ import type React from 'react'
 
 export default function Section({ title, children }: { title: string; children: React.ReactNode }) {
   return (
-    <div style={{ marginBottom: 28 }}>
-      <div style={{
-        fontSize: 9,
-        letterSpacing: '0.25em',
-        color: 'var(--tm)',
-        textTransform: 'uppercase',
-        marginBottom: 14,
-        paddingBottom: 8,
-        borderBottom: '1px solid var(--bs)',
-      }}>
+    <div className="mb-7">
+      <div className="text-[9px] tracking-[0.25em] fg-muted uppercase mb-3.5 pb-2 bdb">
         {title}
       </div>
       {children}

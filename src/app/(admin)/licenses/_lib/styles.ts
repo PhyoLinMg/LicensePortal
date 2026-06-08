@@ -1,60 +1,14 @@
-import type React from 'react'
+export const inputCls =
+  'w-full bg-transparent bdb-b py-1.5 pb-2 text-[13px] fg-t1 font-[inherit]'
 
-export const inputStyle: React.CSSProperties = {
-  width: '100%',
-  background: 'transparent',
-  border: 'none',
-  borderBottom: '1px solid var(--b)',
-  padding: '6px 0 8px',
-  fontSize: 13,
-  color: 'var(--t1)',
-  fontFamily: 'inherit',
-}
+export const lblCls =
+  'block text-[9px] tracking-[0.25em] fg-muted mb-2.5 uppercase'
 
-export const lblStyle: React.CSSProperties = {
-  display: 'block',
-  fontSize: 9,
-  letterSpacing: '0.25em',
-  color: 'var(--tm)',
-  marginBottom: 10,
-  textTransform: 'uppercase',
-}
+export const primBtnCls =
+  'font-[inherit] text-[10px] tracking-[0.2em] font-semibold fg-dark bg-amber border-0 px-4 py-[9px] cursor-pointer uppercase transition-[background] duration-[120ms] detail-btn'
 
-export const primBtnStyle: React.CSSProperties = {
-  fontFamily: 'inherit',
-  fontSize: 10,
-  letterSpacing: '0.2em',
-  fontWeight: 600,
-  color: '#07080d',
-  background: 'var(--amber)',
-  border: 'none',
-  padding: '9px 16px',
-  cursor: 'pointer',
-  textTransform: 'uppercase',
-  transition: 'background 0.12s',
-}
+export const secBtnCls =
+  'font-[inherit] text-[10px] tracking-[0.18em] fg-t2 bg-none bd-b px-[14px] py-[9px] cursor-pointer uppercase transition-[border-color,color] duration-100 detail-btn-sec'
 
-export const secBtnStyle: React.CSSProperties = {
-  fontFamily: 'inherit',
-  fontSize: 10,
-  letterSpacing: '0.18em',
-  color: 'var(--t2)',
-  background: 'none',
-  border: '1px solid var(--b)',
-  padding: '9px 14px',
-  cursor: 'pointer',
-  textTransform: 'uppercase',
-  transition: 'border-color 0.1s, color 0.1s',
-}
-
-export const cancelBtnStyle: React.CSSProperties = {
-  fontFamily: 'inherit',
-  fontSize: 10,
-  letterSpacing: '0.15em',
-  color: 'var(--tm)',
-  background: 'none',
-  border: 'none',
-  cursor: 'pointer',
-  textTransform: 'uppercase',
-  transition: 'color 0.1s',
-}
+export const cancelBtnCls =
+  'font-[inherit] text-[10px] tracking-[0.15em] fg-muted bg-none border-0 cursor-pointer uppercase transition-colors duration-100'

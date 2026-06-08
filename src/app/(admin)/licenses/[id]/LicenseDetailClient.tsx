@@ -10,7 +10,7 @@ import RevokeLicensePanel from '../_components/RevokeLicensePanel'
 
 export default function LicenseDetailClient({ license }: { license: License }) {
   return (
-    <div style={{ padding: '32px 32px 0' }}>
+    <div className="px-8 pt-8">
       <LicenseDetailHeader license={license} />
 
       {license.status === 'revoked' && license.revokedAt && (
@@ -27,7 +27,7 @@ export default function LicenseDetailClient({ license }: { license: License }) {
         <RevokeLicensePanel licenseId={license.id} />
       )}
 
-      <div style={{ height: 48 }} />
+      <div className="h-12" />
     </div>
   )
 }

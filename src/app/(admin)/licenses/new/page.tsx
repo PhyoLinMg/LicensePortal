@@ -12,21 +12,15 @@ export default async function NewLicensePage() {
   ])
 
   return (
-    <div style={{ padding: '32px 32px 0' }}>
+    <div className="px-8 pt-8">
       {/* Header */}
-      <div style={{ paddingBottom: 24, borderBottom: '1px solid var(--bs)', marginBottom: 32 }}>
-        <p style={{ fontSize: 9, letterSpacing: '0.28em', color: 'var(--tm)', marginBottom: 8, textTransform: 'uppercase' }}>
-          Licenses / Issue
-        </p>
-        <h1 style={{ fontSize: 20, fontWeight: 600, color: 'var(--t1)', margin: 0, letterSpacing: '-0.02em' }}>
-          Issue License
-        </h1>
-        <p style={{ fontSize: 11, color: 'var(--t2)', marginTop: 8 }}>
-          Signs a new license with the product&#39;s Ed25519 private key.
-        </p>
+      <div className="pb-6 bdb mb-8">
+        <p className="text-[9px] tracking-[0.28em] fg-muted mb-2 uppercase">Licenses / Issue</p>
+        <h1 className="text-[20px] font-semibold fg-t1 m-0 tracking-[-0.02em]">Issue License</h1>
+        <p className="text-[11px] fg-t2 mt-2">Signs a new license with the product&#39;s Ed25519 private key.</p>
       </div>
 
-      <div style={{ maxWidth: 560 }}>
+      <div className="max-w-[560px]">
         <IssueLicenseForm products={products} customers={customers} />
       </div>
     </div>

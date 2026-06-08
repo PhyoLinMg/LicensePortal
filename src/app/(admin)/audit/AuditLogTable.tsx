@@ -2,6 +2,8 @@
 
 import { useState, useMemo } from 'react'
 import Link from 'next/link'
+import clsx from 'clsx'
+import { eventTypeClass } from '@/app/(admin)/licenses/_lib/format'
 
 export type AuditRow = {
   id: string
@@ -13,19 +15,15 @@ export type AuditRow = {
   productName: string | null
 }
 
-const TYPE_CFG: Record<string, { label: string; fg: string; bg: string; border: string; accent: string }> = {
-  ISSUE:          { label: 'ISSUE',   fg: '#3dd68c', bg: 'rgba(61,214,140,0.05)',  border: 'rgba(61,214,140,0.2)',  accent: '#3dd68c' },
-  REVOKE:         { label: 'REVOKE',  fg: '#f06060', bg: 'rgba(240,96,96,0.05)',   border: 'rgba(240,96,96,0.2)',   accent: '#f06060' },
-  RENEW:          { label: 'RENEW',   fg: '#5ab4f0', bg: 'rgba(90,180,240,0.05)',  border: 'rgba(90,180,240,0.2)',  accent: '#5ab4f0' },
-  HEARTBEAT:      { label: 'HB',      fg: '#4a5578', bg: 'rgba(74,85,120,0.05)',   border: 'rgba(74,85,120,0.15)',  accent: '#4a5578' },
-  HEARTBEAT_FAIL: { label: 'HB FAIL', fg: '#f09050', bg: 'rgba(240,144,80,0.05)',  border: 'rgba(240,144,80,0.2)',  accent: '#f09050' },
-  ADMIN_LOGIN:    { label: 'ADMIN',   fg: '#a87af5', bg: 'rgba(168,122,245,0.05)', border: 'rgba(168,122,245,0.2)', accent: '#a87af5' },
+const TYPE_LABEL: Record<string, string> = {
+  ISSUE: 'ISSUE', REVOKE: 'REVOKE', RENEW: 'RENEW',
+  HEARTBEAT: 'HB', HEARTBEAT_FAIL: 'HB FAIL', ADMIN_LOGIN: 'ADMIN',
+  AUDIT_PRUNE: 'PRUNE', AUDIT_PRUNE_REJECTED: 'PRUNE REJ',
 }
-
-function typeCfg(type: string) {
-  return TYPE_CFG[type] ?? {
-    label: type, fg: '#4a5578', bg: 'rgba(74,85,120,0.05)', border: 'rgba(74,85,120,0.15)', accent: '#4a5578',
-  }
+const TYPE_ACCENT: Record<string, string> = {
+  ISSUE: '#3dd68c', REVOKE: '#f06060', RENEW: '#5ab4f0',
+  HEARTBEAT: '#4a5578', HEARTBEAT_FAIL: '#f09050', ADMIN_LOGIN: '#a87af5',
+  AUDIT_PRUNE: '#4a5578', AUDIT_PRUNE_REJECTED: '#f09050',
 }
 
 function fmtUtc(iso: string) {
@@ -63,228 +61,129 @@ export default function AuditLogTable({ events }: { events: AuditRow[] }) {
   }
 
   return (
-    <>
-      <style>{`
-        .aud-row-btn:hover { background: var(--s1) !important; }
-        .aud-search::placeholder { color: var(--tm); }
-        .aud-search:focus { border-color: var(--b) !important; outline: none; }
-      `}</style>
+    <div className="px-8 py-5">
+      {/* Filter + search */}
+      <div className="flex items-center gap-2 mb-4 flex-wrap">
+        {FILTER_TYPES.map(t => {
+          const on = active.has(t)
+          const typeCls = eventTypeClass(t)
+          return (
+            <button
+              key={t}
+              onClick={() => toggleType(t)}
+              className={clsx(
+                'font-[inherit] text-[9px] tracking-[0.18em] px-[9px] py-[3px] cursor-pointer transition-all duration-100 uppercase',
+                on ? `${typeCls} aud-badge` : 'bd fg-muted bg-transparent',
+              )}
+            >
+              {TYPE_LABEL[t] ?? t}
+            </button>
+          )
+        })}
 
-      <div style={{ padding: '20px 32px' }}>
-        {/* Filter + search */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 16, flexWrap: 'wrap' }}>
-          {FILTER_TYPES.map(t => {
-            const c = typeCfg(t)
-            const on = active.has(t)
-            return (
-              <button
-                key={t}
-                onClick={() => toggleType(t)}
-                style={{
-                  fontFamily: 'inherit',
-                  fontSize: 9,
-                  letterSpacing: '0.18em',
-                  padding: '3px 9px',
-                  border: `1px solid ${on ? c.border : 'var(--bs)'}`,
-                  color: on ? c.fg : 'var(--tm)',
-                  background: on ? c.bg : 'transparent',
-                  cursor: 'pointer',
-                  transition: 'all 0.1s',
-                  textTransform: 'uppercase',
-                }}
-              >
-                {c.label}
-              </button>
-            )
-          })}
-
-          <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 12 }}>
-            <span style={{ fontSize: 9, letterSpacing: '0.15em', color: 'var(--tm)' }}>
-              {rows.length}/{events.length}
-            </span>
-            <input
-              type="text"
-              value={search}
-              onChange={e => setSearch(e.target.value)}
-              placeholder="customer · license · product"
-              className="aud-search"
-              style={{
-                fontFamily: 'inherit',
-                background: 'transparent',
-                border: '1px solid var(--bs)',
-                padding: '5px 12px',
-                fontSize: 11,
-                color: 'var(--t2)',
-                width: 240,
-                transition: 'border-color 0.15s',
-              }}
-            />
-          </div>
-        </div>
-
-        {/* Column headers */}
-        <div style={{
-          display: 'grid',
-          gridTemplateColumns: '88px 150px 1fr 120px 20px',
-          padding: '4px 12px',
-          fontSize: 9,
-          letterSpacing: '0.2em',
-          color: 'var(--tm)',
-          borderBottom: '1px solid var(--bs)',
-          marginBottom: 2,
-          textTransform: 'uppercase',
-        }}>
-          <span>Type</span>
-          <span>Timestamp UTC</span>
-          <span>License · Customer</span>
-          <span>Product</span>
-          <span />
-        </div>
-
-        {/* Rows */}
-        {rows.length === 0 ? (
-          <div style={{ padding: '48px 0', textAlign: 'center', fontSize: 10, color: 'var(--tm)', letterSpacing: '0.25em' }}>
-            — NO EVENTS MATCH —
-          </div>
-        ) : (
-          rows.map((e, i) => {
-            const c = typeCfg(e.type)
-            const { date, time } = fmtUtc(e.createdAt)
-            const isExp = expanded.has(e.id)
-
-            return (
-              <div
-                key={e.id}
-                style={{ animationDelay: `${Math.min(i * 15, 300)}ms`, animation: 'slideRight 0.2s ease both' }}
-              >
-                <button
-                  onClick={() => toggleExp(e.id)}
-                  className="aud-row-btn"
-                  style={{
-                    width: '100%',
-                    display: 'grid',
-                    gridTemplateColumns: '88px 150px 1fr 120px 20px',
-                    padding: '8px 12px',
-                    borderLeft: `2px solid ${isExp ? c.accent : 'transparent'}`,
-                    borderBottom: '1px solid var(--bs)',
-                    background: isExp ? c.bg : 'transparent',
-                    cursor: 'pointer',
-                    transition: 'background 0.1s, border-left-color 0.1s',
-                    textAlign: 'left',
-                    fontFamily: 'inherit',
-                    alignItems: 'center',
-                  }}
-                  onMouseEnter={el => { if (!isExp) el.currentTarget.style.borderLeftColor = c.accent + '60' }}
-                  onMouseLeave={el => { if (!isExp) el.currentTarget.style.borderLeftColor = 'transparent' }}
-                >
-                  {/* Badge */}
-                  <div>
-                    <span style={{
-                      display: 'inline-block',
-                      fontSize: 8,
-                      fontWeight: 600,
-                      letterSpacing: '0.15em',
-                      padding: '2px 6px',
-                      border: `1px solid ${c.border}`,
-                      color: c.fg,
-                      background: c.bg,
-                      fontFamily: 'inherit',
-                      textTransform: 'uppercase',
-                    }}>
-                      {c.label}
-                    </span>
-                  </div>
-
-                  {/* Timestamp */}
-                  <div>
-                    <div style={{ fontSize: 10, color: 'var(--t2)' }}>{date}</div>
-                    <div style={{ fontSize: 9, color: 'var(--tm)' }}>{time}</div>
-                  </div>
-
-                  {/* License + customer */}
-                  <div style={{ overflow: 'hidden' }}>
-                    <div style={{ fontSize: 10, color: 'var(--t2)' }}>
-                      {e.licenseId ? (
-                        <><span>{e.licenseId.slice(0, 8)}</span><span style={{ color: 'var(--tm)' }}>…</span></>
-                      ) : '—'}
-                    </div>
-                    {e.customerName && (
-                      <div style={{ fontSize: 9, color: 'var(--tm)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                        {e.customerName}
-                      </div>
-                    )}
-                  </div>
-
-                  {/* Product */}
-                  <div style={{ fontSize: 10, color: 'var(--tm)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                    {e.productName ?? '—'}
-                  </div>
-
-                  {/* Expand */}
-                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                    <span style={{
-                      fontSize: 13,
-                      color: 'var(--tm)',
-                      display: 'inline-block',
-                      transform: isExp ? 'rotate(90deg)' : 'none',
-                      transition: 'transform 0.15s',
-                      lineHeight: 1,
-                    }}>›</span>
-                  </div>
-                </button>
-
-                {isExp && (
-                  <div style={{ padding: '0 12px 10px 14px' }}>
-                    <div style={{
-                      border: `1px solid ${c.border}`,
-                      background: c.bg,
-                      padding: '10px 14px',
-                    }}>
-                      <pre style={{
-                        fontSize: 11,
-                        lineHeight: 1.75,
-                        color: c.fg,
-                        whiteSpace: 'pre-wrap',
-                        wordBreak: 'break-all',
-                        margin: 0,
-                        fontFamily: 'inherit',
-                      }}>
-                        {JSON.stringify(e.payload, null, 2)}
-                      </pre>
-                      <div style={{
-                        marginTop: 10,
-                        paddingTop: 10,
-                        borderTop: `1px solid ${c.border}`,
-                        fontSize: 9,
-                        letterSpacing: '0.1em',
-                        display: 'flex',
-                        justifyContent: 'space-between',
-                        alignItems: 'center',
-                        fontFamily: 'inherit',
-                      }}>
-                        <span style={{ color: c.fg, opacity: 0.4 }}>evt/{e.id}</span>
-                        {e.licenseId && (
-                          <Link
-                            href={`/licenses/${e.licenseId}`}
-                            style={{ color: c.fg, opacity: 0.6, textDecoration: 'none', fontSize: 9 }}
-                            onClick={ev => ev.stopPropagation()}
-                          >
-                            → view license
-                          </Link>
-                        )}
-                      </div>
-                    </div>
-                  </div>
-                )}
-              </div>
-            )
-          })
-        )}
-
-        <div style={{ padding: '14px 0', textAlign: 'center', fontSize: 9, color: 'var(--tm)', letterSpacing: '0.22em', textTransform: 'uppercase' }}>
-          Immutable · Append-Only · {events.length} Total Records
+        <div className="ml-auto flex items-center gap-3">
+          <span className="text-[9px] tracking-[0.15em] fg-muted">{rows.length}/{events.length}</span>
+          <input
+            type="text"
+            value={search}
+            onChange={e => setSearch(e.target.value)}
+            placeholder="customer · license · product"
+            className="aud-search font-[inherit] bg-transparent bd fg-t2 px-3 py-[5px] text-[11px] w-60 transition-[border-color] duration-[150ms]"
+          />
         </div>
       </div>
-    </>
+
+      {/* Column headers */}
+      <div className="grid grid-cols-[88px_150px_1fr_120px_20px] px-3 py-1 text-[9px] tracking-[0.2em] fg-muted bdb mb-0.5 uppercase">
+        <span>Type</span><span>Timestamp UTC</span><span>License · Customer</span><span>Product</span><span />
+      </div>
+
+      {/* Rows */}
+      {rows.length === 0 ? (
+        <div className="py-12 text-center text-[10px] fg-muted tracking-[0.25em]">— NO EVENTS MATCH —</div>
+      ) : (
+        rows.map((e) => {
+          const typeCls = eventTypeClass(e.type)
+          const { date, time } = fmtUtc(e.createdAt)
+          const isExp = expanded.has(e.id)
+          const accent = TYPE_ACCENT[e.type] ?? '#4a5578'
+
+          return (
+            <div key={e.id} className="slide-in">
+              <button
+                onClick={() => toggleExp(e.id)}
+                className={clsx(
+                  'aud-row-btn w-full grid grid-cols-[88px_150px_1fr_120px_20px] px-3 py-2 bdb cursor-pointer transition-[background,border-left-color] duration-100 text-left font-[inherit] items-center',
+                  isExp ? `${typeCls} aud-row-expanded` : 'aud-row-collapsed bg-transparent',
+                )}
+                onMouseEnter={el => { if (!isExp) el.currentTarget.style.borderLeftColor = accent + '60' }}
+                onMouseLeave={el => { if (!isExp) el.currentTarget.style.borderLeftColor = 'transparent' }}
+              >
+                {/* Badge */}
+                <div>
+                  <span className={`${typeCls} aud-badge inline-block text-[8px] font-semibold tracking-[0.15em] px-1.5 py-0.5 font-[inherit] uppercase`}>
+                    {TYPE_LABEL[e.type] ?? e.type}
+                  </span>
+                </div>
+
+                {/* Timestamp */}
+                <div>
+                  <div className="text-[10px] fg-t2">{date}</div>
+                  <div className="text-[9px] fg-muted">{time}</div>
+                </div>
+
+                {/* License + customer */}
+                <div className="overflow-hidden">
+                  <div className="text-[10px] fg-t2">
+                    {e.licenseId ? (
+                      <><span>{e.licenseId.slice(0, 8)}</span><span className="fg-muted">…</span></>
+                    ) : '—'}
+                  </div>
+                  {e.customerName && (
+                    <div className="text-[9px] fg-muted truncate">{e.customerName}</div>
+                  )}
+                </div>
+
+                {/* Product */}
+                <div className="text-[10px] fg-muted truncate">{e.productName ?? '—'}</div>
+
+                {/* Expand */}
+                <div className="flex items-center justify-center">
+                  <span className={clsx('text-[13px] fg-muted inline-block transition-transform duration-[150ms] leading-none', isExp && 'rotate-90')}>
+                    ›
+                  </span>
+                </div>
+              </button>
+
+              {isExp && (
+                <div className="px-3 pb-2.5 pl-3.5">
+                  <div className={`${typeCls} aud-expand-box px-3.5 py-2.5`}>
+                    <pre className={`${typeCls} aud-expand-text text-[11px] leading-7 whitespace-pre-wrap break-all m-0 font-[inherit]`}>
+                      {JSON.stringify(e.payload, null, 2)}
+                    </pre>
+                    <div className={`${typeCls} aud-expand-footer mt-2.5 pt-2.5 text-[9px] tracking-[0.1em] flex justify-between items-center font-[inherit]`}>
+                      <span className="aud-expand-text opacity-40">evt/{e.id}</span>
+                      {e.licenseId && (
+                        <Link
+                          href={`/licenses/${e.licenseId}`}
+                          className="aud-expand-text opacity-60 no-underline text-[9px]"
+                          onClick={ev => ev.stopPropagation()}
+                        >
+                          → view license
+                        </Link>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
+          )
+        })
+      )}
+
+      <div className="py-3.5 text-center text-[9px] fg-muted tracking-[0.22em] uppercase">
+        Immutable · Append-Only · {events.length} Total Records
+      </div>
+    </div>
   )
 }

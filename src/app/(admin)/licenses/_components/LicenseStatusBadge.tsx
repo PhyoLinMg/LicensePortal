@@ -1,11 +1,18 @@
-import { statusColor } from '../_lib/format'
+import { statusClass } from '../_lib/format'
+
+function statusBgClass(s: string): string {
+  if (s === 'active') return 'bg-green'
+  if (s === 'revoked') return 'bg-red'
+  return 'bg-amber'
+}
 
 export default function LicenseStatusBadge({ status }: { status: string }) {
-  const color = statusColor(status)
+  const textCls = statusClass(status)
+  const bgCls = statusBgClass(status)
   return (
-    <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-      <span style={{ width: 6, height: 6, borderRadius: '50%', background: color, display: 'inline-block' }} />
-      <span style={{ fontSize: 9, letterSpacing: '0.2em', color, textTransform: 'uppercase' }}>
+    <div className="flex items-center gap-2">
+      <span className={`w-1.5 h-1.5 rounded-full ${bgCls} inline-block`} />
+      <span className={`text-[9px] tracking-[0.2em] ${textCls} uppercase`}>
         {status}
       </span>
     </div>

@@ -198,7 +198,7 @@ Next heartbeat or validate call from the product returns `REVOKED`. The product 
 
 ### Authentication
 
-All `/api/admin/**` routes require cookie `lsrv_session` (HS256 JWT, 8h TTL).
+All `/api/admin/**` routes require cookie `lsrv_session` (HS256 JWT, 2h TTL, JTI-verified server-side).
 
 Public routes (no auth): `/api/v1/validate`, `/api/v1/heartbeat`.
 
@@ -337,9 +337,8 @@ Called by product on boot and hourly poll. No auth required — license text is 
 |--------|---------|---------|
 | 400 | `license_text required` | Missing body field |
 | 422 | `malformed_license` | Can't parse token |
-| 422 | `invalid_signature` | Ed25519 sig mismatch |
-| 422 | `unknown_product` | `slug` not in DB |
-| 404 | `license_not_found` | `license_id` not in DB |
+| 422 | `invalid_license` | Unknown product slug or bad Ed25519 signature (deliberately indistinguishable) |
+| 404 | `license_not_found` | `license_id` not in DB (signature was valid) |
 
 ---
 
@@ -412,9 +411,6 @@ Reverse-proxy to `PROXY_UPSTREAM_URL`. Returns `402 { "error": "NO_LICENSE" | "E
 ### 1. Generate secrets
 
 ```bash
-# KEK_BASE64: 32-byte AES-256 key
-node -e "console.log(require('crypto').randomBytes(32).toString('base64'))"
-
 # JWT_SECRET: 64-byte signing secret
 node -e "console.log(require('crypto').randomBytes(64).toString('base64'))"
 
@@ -431,7 +427,6 @@ POSTGRES_USER=postgres
 POSTGRES_PASSWORD=<strong password>
 POSTGRES_DB=license_server
 
-KEK_BASE64=<32-byte base64 from step 1>
 JWT_SECRET=<64-byte base64 from step 1>
 
 ADMIN_EMAIL=admin@yourcompany.com
@@ -439,20 +434,79 @@ ADMIN_PASSWORD_HASH=<bcrypt hash from step 1>
 
 NEXT_PUBLIC_BASE_URL=https://license.yourcompany.com
 
-# Optional: proxy to your product backend
-# PROXY_UPSTREAM_URL=http://my-product-backend:8080
-# PROXY_BYPASS_PREFIXES=api/health/,api/webhooks/
+# Required in production — set to the header your reverse proxy exclusively controls.
+# "cf-connecting-ip" for Cloudflare, "x-real-ip" for nginx/Caddy.
+TRUSTED_PROXY_HEADER=x-real-ip
 ```
 
-> **Security:** `KEK_BASE64` encrypts all product private keys at rest. Losing it means you cannot sign new licenses. Back it up securely.
+> `KEK_BASE64` is **not** set in `.env` — it lives in Vault. You will generate and store it in step 3.
 
-### 3. Deploy with Docker Compose
+### 3. Bootstrap Vault and store the KEK
+
+Start Vault first, then initialize it. **Save the unseal key and root token** — they cannot be recovered.
+
+```bash
+# Start Vault only
+docker compose up -d vault
+
+# Initialize (1 share, 1 threshold — suitable for single-operator deployments)
+docker compose exec vault vault operator init -key-shares=1 -key-threshold=1
+
+# Unseal (repeat after every server reboot)
+docker compose exec vault vault operator unseal <unseal_key>
+
+# Log in with root token
+docker compose exec vault vault login <root_token>
+
+# Enable KV v2 secrets engine
+docker compose exec vault vault secrets enable -path=secret kv-v2
+
+# Enable AppRole auth
+docker compose exec vault vault auth enable approle
+
+# Create read-only policy for keyforge
+docker compose exec vault vault policy write keyforge - <<'EOF'
+path "secret/data/keyforge/kek" { capabilities = ["read"] }
+EOF
+
+# Create the AppRole (short-lived tokens — 5 min TTL, used only at container startup)
+docker compose exec vault vault write auth/approle/role/keyforge \
+  token_policies="keyforge" token_ttl=5m token_max_ttl=10m
+
+# Generate and store a fresh KEK (32 random bytes)
+KEK=$(node -e "console.log(require('crypto').randomBytes(32).toString('base64'))")
+docker compose exec vault vault kv put secret/keyforge/kek kek_base64="$KEK"
+
+# Get AppRole credentials → add to .env
+docker compose exec vault vault read auth/approle/role/keyforge/role-id
+docker compose exec vault vault write -f auth/approle/role/keyforge/secret-id
+```
+
+Add `VAULT_ROLE_ID` and `VAULT_SECRET_ID` from the output above to your `.env`:
+
+```env
+VAULT_ROLE_ID=<role_id from above>
+VAULT_SECRET_ID=<secret_id from above>
+```
+
+> **After every server reboot:** Vault starts sealed. Unseal it before starting the other services:
+> ```bash
+> docker compose up -d vault
+> docker compose exec vault vault operator unseal <unseal_key>
+> docker compose up -d
+> ```
+
+### 4. Deploy with Docker Compose
 
 ```bash
 docker compose up -d
 ```
 
-Portal starts on port `3001`. The entrypoint runs `prisma db push` automatically on each start (schema-creates tables if missing, safe to re-run).
+Portal starts on port `3001`. On startup the entrypoint:
+1. Authenticates to Vault via AppRole
+2. Fetches `KEK_BASE64` from `secret/keyforge/kek`
+3. Runs `prisma migrate deploy`
+4. Starts the Next.js server
 
 ### 4. Put behind a reverse proxy
 
@@ -463,6 +517,10 @@ license.yourcompany.com {
     reverse_proxy localhost:3001
 }
 ```
+
+> **`TRUSTED_PROXY_HEADER`:** Set this to `x-real-ip` (nginx/Caddy) or `cf-connecting-ip` (Cloudflare) so the rate limiter can key on real client IPs. Without it, all clients share one rate-limit bucket.
+
+The container includes a built-in health check using `node` (no `curl` dependency). Orchestrators (Docker Swarm, ECS, Kubernetes liveness probes) can rely on it directly.
 
 ### 5. First login
 
@@ -481,6 +539,12 @@ docker compose up -d
 
 The entrypoint runs `prisma migrate deploy` on startup, applying any pending migrations.
 
+> **Pre-deploy checklist for this release:**
+>
+> 1. **`prisma migrate deploy` must run before the new container serves traffic.** Migration `0002_add_session_table` adds the `Session` table required for JTI-based session revocation. If the table is missing, `verifySession()` fails on every request → fail-closed admin lockout.
+> 2. **Set `TRUSTED_PROXY_HEADER` in your production env** (`x-real-ip` or `cf-connecting-ip`). Without it, all rate-limit buckets collapse to a single `unknown` key — per-IP rate limiting is disabled on the login and heartbeat endpoints.
+> 3. **Existing admin sessions will force a re-login.** Old JWTs carry no `jti` claim; `verifySession()` rejects them. Any logged-in admin will be kicked and must log in again after the upgrade.
+
 > **One-time step for deployments that ran v0.1.x (before migrations were introduced):**
 > Those deployments created schema via `prisma db push` and have no `_prisma_migrations` history.
 > Before upgrading, baseline the initial migration so Prisma does not try to recreate existing tables:
@@ -495,7 +559,10 @@ The entrypoint runs `prisma migrate deploy` on startup, applying any pending mig
 
 ### Backups
 
-Back up the PostgreSQL volume (`pgdata`). The only secrets that cannot be regenerated are `KEK_BASE64` (needed to decrypt private keys) and `ADMIN_PASSWORD_HASH`. Store both in a secrets manager.
+- **PostgreSQL volume** (`pgdata`): back up regularly — contains all license, customer, and product data.
+- **Vault volume** (`vaultdata`): back up regularly — contains the encrypted KEK. If lost, you cannot decrypt product private keys.
+- **Vault unseal key**: store offline, separately from the server (printed during `vault operator init`).
+- **`ADMIN_PASSWORD_HASH`**: regeneratable via `bcryptjs`; keep a record of the plaintext password in a password manager.
 
 ---
 

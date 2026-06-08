@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 import type { License } from '../_lib/types'
-import { primBtnStyle, secBtnStyle } from '../_lib/styles'
+import { primBtnCls, secBtnCls } from '../_lib/styles'
 import LicenseStatusBadge from './LicenseStatusBadge'
 
 type Props = Pick<License, 'id' | 'status' | 'tier' | 'licenseText' | 'customer' | 'product'>
@@ -27,36 +27,30 @@ export default function LicenseDetailHeader({ license }: { license: Props }) {
   }
 
   return (
-    <>
-      <style>{`
-        .detail-btn:hover { background: var(--amber-d) !important; }
-        .detail-btn-sec:hover { border-color: var(--b2) !important; color: var(--t1) !important; }
-      `}</style>
-      <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', paddingBottom: 20, borderBottom: '1px solid var(--bs)', marginBottom: 28 }}>
-        <div>
-          <p style={{ fontSize: 9, letterSpacing: '0.28em', color: 'var(--tm)', marginBottom: 8, textTransform: 'uppercase' }}>
-            Licenses / Detail
-          </p>
-          <div style={{ display: 'flex', alignItems: 'baseline', gap: 12, marginBottom: 4 }}>
-            <h1 style={{ fontSize: 20, fontWeight: 600, color: 'var(--t1)', margin: 0, letterSpacing: '-0.02em' }}>
-              {license.customer.name}
-            </h1>
-            <span style={{ fontSize: 11, color: 'var(--t2)' }}>{license.product.name}</span>
-            <span style={{ fontSize: 8, letterSpacing: '0.18em', color: 'var(--tm)', border: '1px solid var(--b)', padding: '1px 5px', textTransform: 'uppercase' }}>
-              {license.tier}
-            </span>
-          </div>
-          <LicenseStatusBadge status={license.status} />
+    <div className="flex items-end justify-between pb-5 bdb mb-7">
+      <div>
+        <p className="text-[9px] tracking-[0.28em] fg-muted mb-2 uppercase">
+          Licenses / Detail
+        </p>
+        <div className="flex items-baseline gap-3 mb-1">
+          <h1 className="text-[20px] font-semibold fg-t1 m-0 tracking-[-0.02em]">
+            {license.customer.name}
+          </h1>
+          <span className="text-[11px] fg-t2">{license.product.name}</span>
+          <span className="text-[8px] tracking-[0.18em] fg-muted bd-b px-[5px] py-px uppercase">
+            {license.tier}
+          </span>
         </div>
-        <div style={{ display: 'flex', gap: 10 }}>
-          <button onClick={copyLic} className="detail-btn-sec" style={secBtnStyle}>
-            {copiedLic ? 'Copied ✓' : 'Copy .lic'}
-          </button>
-          <button onClick={download} className="detail-btn" style={primBtnStyle}>
-            Download .lic
-          </button>
-        </div>
+        <LicenseStatusBadge status={license.status} />
       </div>
-    </>
+      <div className="flex gap-2.5">
+        <button onClick={copyLic} className={secBtnCls}>
+          {copiedLic ? 'Copied ✓' : 'Copy .lic'}
+        </button>
+        <button onClick={download} className={primBtnCls}>
+          Download .lic
+        </button>
+      </div>
+    </div>
   )
 }

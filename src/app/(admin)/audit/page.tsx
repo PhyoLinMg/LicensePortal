@@ -46,32 +46,20 @@ export default async function AuditPage() {
 
   return (
     <>
-      <div style={{ padding: '32px 32px 0' }}>
+      <div className="px-8 pt-8">
         {/* Header */}
-        <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', paddingBottom: 24, borderBottom: '1px solid var(--bs)' }}>
+        <div className="flex items-end justify-between pb-6 bdb">
           <div>
-            <p style={{ fontSize: 9, letterSpacing: '0.28em', color: 'var(--tm)', marginBottom: 8, textTransform: 'uppercase' }}>
-              License Portal
-            </p>
-            <h1 style={{ fontSize: 20, fontWeight: 600, color: 'var(--t1)', margin: 0, letterSpacing: '-0.02em' }}>
-              Audit Log
-            </h1>
-            <p style={{ fontSize: 11, color: 'var(--t2)', marginTop: 6 }}>
-              Immutable record — last 500 events shown
-            </p>
+            <p className="text-[9px] tracking-[0.28em] fg-muted mb-2 uppercase">License Portal</p>
+            <h1 className="text-[20px] font-semibold fg-t1 m-0 tracking-[-0.02em]">Audit Log</h1>
+            <p className="text-[11px] fg-t2 mt-1.5">Immutable record — last 500 events shown</p>
           </div>
 
           {isLive && (
-            <div style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 9, letterSpacing: '0.22em', color: 'var(--tm)' }}>
-              <span className="relative flex" style={{ width: 8, height: 8 }}>
-                <span
-                  className="animate-ping absolute inline-flex rounded-full"
-                  style={{ width: '100%', height: '100%', background: 'var(--green)', opacity: 0.5 }}
-                />
-                <span
-                  className="relative inline-flex rounded-full"
-                  style={{ width: 8, height: 8, background: 'var(--green)' }}
-                />
+            <div className="flex items-center gap-2 text-[9px] tracking-[0.22em] fg-muted">
+              <span className="relative flex w-2 h-2">
+                <span className="animate-ping absolute inline-flex rounded-full w-full h-full bg-green opacity-50" />
+                <span className="relative inline-flex rounded-full w-2 h-2 bg-green" />
               </span>
               LIVE
             </div>
@@ -79,11 +67,11 @@ export default async function AuditPage() {
         </div>
 
         {/* Stats */}
-        <div style={{ display: 'flex', gap: 32, padding: '18px 0', borderBottom: '1px solid var(--bs)' }}>
+        <div className="flex gap-8 py-[18px] bdb">
           <Stat label="30-Day Events" value={stats.total} />
-          <Stat label="Issued" value={stats.issued} color="var(--green)" />
-          <Stat label="Revoked" value={stats.revoked} color="var(--red)" />
-          <Stat label="HB Failures" value={stats.failures} color="var(--orange)" />
+          <Stat label="Issued" value={stats.issued} colorCls="fg-green" />
+          <Stat label="Revoked" value={stats.revoked} colorCls="fg-red" />
+          <Stat label="HB Failures" value={stats.failures} colorCls="fg-orange" />
         </div>
       </div>
 
@@ -92,15 +80,11 @@ export default async function AuditPage() {
   )
 }
 
-function Stat({ label, value, color = 'var(--t2)' }: { label: string; value: number; color?: string }) {
+function Stat({ label, value, colorCls = 'fg-t2' }: { label: string; value: number; colorCls?: string }) {
   return (
     <div>
-      <div style={{ fontSize: 9, letterSpacing: '0.2em', color: 'var(--tm)', textTransform: 'uppercase', marginBottom: 3 }}>
-        {label}
-      </div>
-      <div style={{ fontSize: 22, fontWeight: 600, color, letterSpacing: '-0.03em' }}>
-        {value}
-      </div>
+      <div className="text-[9px] tracking-[0.2em] fg-muted uppercase mb-[3px]">{label}</div>
+      <div className={`text-[22px] font-semibold ${colorCls} tracking-[-0.03em]`}>{value}</div>
     </div>
   )
 }

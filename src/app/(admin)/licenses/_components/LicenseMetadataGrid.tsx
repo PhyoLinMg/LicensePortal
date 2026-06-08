@@ -8,7 +8,7 @@ type Props = Pick<License, 'id' | 'issuedAt' | 'expiresAt' | 'customer' | 'produ
 export default function LicenseMetadataGrid({ license }: { license: Props }) {
   return (
     <Section title="Details">
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '18px 24px' }}>
+      <div className="grid grid-cols-3 gap-x-6 gap-y-[18px]">
         <MetaItem label="License ID" value={license.id} mono />
         <MetaItem label="Issued" value={fmtTs(license.issuedAt)} />
         <MetaItem label="Expires" value={fmtTs(license.expiresAt)} />
@@ -20,7 +20,7 @@ export default function LicenseMetadataGrid({ license }: { license: Props }) {
         <MetaItem label="Key ID" value={license.product.keyId} mono />
         <MetaItem label="Grace Period" value={`${license.gracePeriodDays} days`} />
         {license.heartbeatUrl && (
-          <div style={{ gridColumn: '1 / -1' }}>
+          <div className="col-span-3">
             <MetaItem label="Heartbeat URL" value={license.heartbeatUrl} mono />
           </div>
         )}

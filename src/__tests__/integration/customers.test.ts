@@ -7,11 +7,14 @@ describe('Admin customers API', () => {
 
   // ── GET ──────────────────────────────────────────────────────────────────
 
-  it('GET returns empty list initially', async () => {
+  it('GET returns empty paginated list initially', async () => {
     const req = await adminRequest('http://localhost/api/admin/customers')
     const res = await GET(req)
     expect(res.status).toBe(200)
-    expect(await res.json()).toEqual([])
+    const body = await res.json()
+    expect(body.data).toEqual([])
+    expect(body.pagination.total).toBe(0)
+    expect(res.headers.get('X-Total-Count')).toBe('0')
   })
 
   it('GET returns 401 without auth', async () => {
@@ -20,7 +23,7 @@ describe('Admin customers API', () => {
     expect(res.status).toBe(401)
   })
 
-  it('GET lists created customers with license count', async () => {
+  it('GET lists created customers with license count in paginated shape', async () => {
     const createReq = await adminRequest('http://localhost/api/admin/customers', {
       method: 'POST',
       body: JSON.stringify({ name: 'Acme Corp', email: 'acme@test.com' }),
@@ -30,10 +33,12 @@ describe('Admin customers API', () => {
 
     const listReq = await adminRequest('http://localhost/api/admin/customers')
     const res = await GET(listReq)
-    const customers = await res.json()
-    expect(customers).toHaveLength(1)
-    expect(customers[0].name).toBe('Acme Corp')
-    expect(customers[0]._count.licenses).toBe(0)
+    const body = await res.json()
+    expect(body.data).toHaveLength(1)
+    expect(body.data[0].name).toBe('Acme Corp')
+    expect(body.data[0]._count.licenses).toBe(0)
+    expect(body.pagination.total).toBe(1)
+    expect(res.headers.get('X-Total-Count')).toBe('1')
   })
 
   // ── POST ─────────────────────────────────────────────────────────────────

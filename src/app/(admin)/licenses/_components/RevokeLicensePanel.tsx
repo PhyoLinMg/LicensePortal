@@ -2,8 +2,9 @@
 
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { cancelBtnStyle } from '../_lib/styles'
+import { cancelBtnCls } from '../_lib/styles'
 import Section from './Section'
+import clsx from 'clsx'
 
 export default function RevokeLicensePanel({ licenseId }: { licenseId: string }) {
   const router = useRouter()
@@ -29,82 +30,47 @@ export default function RevokeLicensePanel({ licenseId }: { licenseId: string })
   const disabled = revoking || !revokeReason.trim()
 
   return (
-    <>
-      <style>{`
-        .rev-input { transition: border-color 0.15s; }
-        .rev-input:focus { border-bottom-color: var(--red) !important; outline: none; }
-        .rev-input::placeholder { color: var(--tm); }
-      `}</style>
-      <Section title="Danger Zone">
-        {!show ? (
-          <button
-            onClick={() => setShow(true)}
-            style={{
-              fontFamily: 'inherit',
-              fontSize: 10,
-              letterSpacing: '0.18em',
-              color: 'var(--red)',
-              background: 'none',
-              border: '1px solid rgba(240,96,96,0.3)',
-              padding: '9px 16px',
-              cursor: 'pointer',
-              textTransform: 'uppercase',
-            }}
-          >
-            Revoke License
-          </button>
-        ) : (
-          <div>
-            <p style={{ fontSize: 11, color: 'var(--t2)', marginBottom: 14 }}>
-              Revocation is immediate. Next heartbeat returns <code style={{ color: 'var(--red)' }}>revoked</code> — instance blocks mutations.
-            </p>
-            <input
-              type="text"
-              required
-              value={revokeReason}
-              onChange={e => setRevokeReason(e.target.value)}
-              placeholder="Reason (e.g. non-payment)"
-              className="rev-input"
-              style={{
-                width: '100%',
-                maxWidth: 380,
-                background: 'transparent',
-                border: 'none',
-                borderBottom: '1px solid var(--b)',
-                padding: '6px 0 8px',
-                fontSize: 13,
-                color: 'var(--t1)',
-                fontFamily: 'inherit',
-                marginBottom: 16,
-                display: 'block',
-              }}
-            />
-            <div style={{ display: 'flex', gap: 12 }}>
-              <button
-                onClick={revoke}
-                disabled={disabled}
-                style={{
-                  fontFamily: 'inherit',
-                  fontSize: 10,
-                  letterSpacing: '0.18em',
-                  color: disabled ? 'var(--tm)' : '#07080d',
-                  background: disabled ? 'transparent' : 'var(--red)',
-                  border: `1px solid ${disabled ? 'var(--b)' : 'var(--red)'}`,
-                  padding: '9px 16px',
-                  cursor: revoking ? 'wait' : disabled ? 'not-allowed' : 'pointer',
-                  textTransform: 'uppercase',
-                  transition: 'background 0.1s, color 0.1s',
-                }}
-              >
-                {revoking ? 'Revoking…' : 'Confirm Revoke'}
-              </button>
-              <button onClick={() => setShow(false)} style={cancelBtnStyle}>
-                Cancel
-              </button>
-            </div>
+    <Section title="Danger Zone">
+      {!show ? (
+        <button
+          onClick={() => setShow(true)}
+          className="font-[inherit] text-[10px] tracking-[0.18em] fg-red bg-none border border-[rgba(240,96,96,0.3)] px-4 py-[9px] cursor-pointer uppercase"
+        >
+          Revoke License
+        </button>
+      ) : (
+        <div>
+          <p className="text-[11px] fg-t2 mb-3.5">
+            Revocation is immediate. Next heartbeat returns <code className="fg-red">revoked</code> — instance blocks mutations.
+          </p>
+          <input
+            type="text"
+            required
+            value={revokeReason}
+            onChange={e => setRevokeReason(e.target.value)}
+            placeholder="Reason (e.g. non-payment)"
+            className="rev-input w-full max-w-[380px] bg-transparent bdb-b py-1.5 pb-2 text-[13px] fg-t1 font-[inherit] mb-4 block"
+          />
+          <div className="flex gap-3">
+            <button
+              onClick={revoke}
+              disabled={disabled}
+              className={clsx(
+                'font-[inherit] text-[10px] tracking-[0.18em] px-4 py-[9px] uppercase transition-[background,color] duration-100',
+                disabled
+                  ? 'fg-muted bg-transparent bd-b cursor-not-allowed'
+                  : 'fg-dark bg-red border border-[var(--red)] cursor-pointer',
+                revoking && 'cursor-wait',
+              )}
+            >
+              {revoking ? 'Revoking…' : 'Confirm Revoke'}
+            </button>
+            <button onClick={() => setShow(false)} className={cancelBtnCls}>
+              Cancel
+            </button>
           </div>
-        )}
-      </Section>
-    </>
+        </div>
+      )}
+    </Section>
   )
 }

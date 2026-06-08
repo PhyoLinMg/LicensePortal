@@ -1,36 +1,23 @@
 import type { AuditEvent } from '../_lib/types'
-import { fmtTs, EVENT_COLOR } from '../_lib/format'
+import { fmtTs, EVENT_CLASS } from '../_lib/format'
 import Section from './Section'
 
 export default function LicenseAuditEvents({ events }: { events: AuditEvent[] }) {
   return (
     <Section title="Recent Events">
       {events.length === 0 ? (
-        <p style={{ fontSize: 11, color: 'var(--tm)' }}>No events yet.</p>
+        <p className="text-[11px] fg-muted">No events yet.</p>
       ) : (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 0 }}>
+        <div className="flex flex-col">
           {events.map(e => (
-            <div key={e.id} style={{
-              display: 'flex',
-              alignItems: 'baseline',
-              gap: 14,
-              padding: '7px 0',
-              borderBottom: '1px solid var(--bs)',
-              fontSize: 11,
-            }}>
-              <span style={{
-                color: EVENT_COLOR[e.type] ?? 'var(--t2)',
-                letterSpacing: '0.1em',
-                minWidth: 90,
-                textTransform: 'uppercase',
-                fontSize: 9,
-              }}>
+            <div key={e.id} className="flex items-baseline gap-3.5 py-[7px] bdb text-[11px]">
+              <span className={`${EVENT_CLASS[e.type] ?? 'fg-t2'} tracking-[0.1em] min-w-[90px] uppercase text-[9px]`}>
                 {e.type.replace('_', ' ')}
               </span>
-              <span style={{ color: 'var(--tm)', fontVariantNumeric: 'tabular-nums', flexShrink: 0 }}>
+              <span className="fg-muted shrink-0 [font-variant-numeric:tabular-nums]">
                 {fmtTs(e.createdAt)}
               </span>
-              <span style={{ color: 'var(--tm)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', fontSize: 10 }}>
+              <span className="fg-muted truncate text-[10px]">
                 {JSON.stringify(e.payload)}
               </span>
             </div>

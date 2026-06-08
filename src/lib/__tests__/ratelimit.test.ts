@@ -13,39 +13,51 @@ afterEach(() => {
 // ── allow ─────────────────────────────────────────────────────────────────────
 
 describe('allow', () => {
-  it('first request within limit returns true', () => {
-    expect(allow('test:ip-a', 5, 60_000)).toBe(true)
+  it('first request within limit returns ok=true with correct counters', () => {
+    const r = allow('test:ip-a', 5, 60_000)
+    expect(r.ok).toBe(true)
+    expect(r.limit).toBe(5)
+    expect(r.remaining).toBe(4)
   })
 
-  it('requests up to the limit all return true', () => {
+  it('requests up to the limit all return ok=true', () => {
     for (let i = 0; i < 5; i++) {
-      expect(allow('test:ip-b', 5, 60_000)).toBe(true)
+      expect(allow('test:ip-b', 5, 60_000).ok).toBe(true)
     }
   })
 
-  it('request exceeding the limit returns false', () => {
+  it('request exceeding the limit returns ok=false with remaining=0', () => {
     for (let i = 0; i < 5; i++) allow('test:ip-c', 5, 60_000)
-    expect(allow('test:ip-c', 5, 60_000)).toBe(false)
+    const r = allow('test:ip-c', 5, 60_000)
+    expect(r.ok).toBe(false)
+    expect(r.remaining).toBe(0)
   })
 
   it('counter resets after windowMs elapses', () => {
     for (let i = 0; i < 5; i++) allow('test:ip-d', 5, 60_000)
-    expect(allow('test:ip-d', 5, 60_000)).toBe(false)
+    expect(allow('test:ip-d', 5, 60_000).ok).toBe(false)
 
     vi.advanceTimersByTime(60_001)
 
-    expect(allow('test:ip-d', 5, 60_000)).toBe(true)
+    expect(allow('test:ip-d', 5, 60_000).ok).toBe(true)
   })
 
   it('different keys have independent counters', () => {
     for (let i = 0; i < 5; i++) allow('test:ip-e', 5, 60_000)
     // exhausted ip-e, but ip-f is fresh
-    expect(allow('test:ip-f', 5, 60_000)).toBe(true)
+    expect(allow('test:ip-f', 5, 60_000).ok).toBe(true)
   })
 
   it('limit of 1 allows exactly one request', () => {
-    expect(allow('strict:key', 1, 60_000)).toBe(true)
-    expect(allow('strict:key', 1, 60_000)).toBe(false)
+    expect(allow('strict:key', 1, 60_000).ok).toBe(true)
+    expect(allow('strict:key', 1, 60_000).ok).toBe(false)
+  })
+
+  it('resetAt is approximately now + windowMs', () => {
+    const before = Date.now()
+    const r = allow('test:ip-reset', 5, 60_000)
+    expect(r.resetAt).toBeGreaterThanOrEqual(before + 60_000)
+    expect(r.resetAt).toBeLessThanOrEqual(before + 60_000 + 100)
   })
 })
 

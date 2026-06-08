@@ -26,4 +26,8 @@ COPY docker-entrypoint.sh /docker-entrypoint.sh
 RUN chmod +x /docker-entrypoint.sh
 
 EXPOSE 3001
+
+HEALTHCHECK --interval=10s --timeout=5s --start-period=40s --retries=3 \
+  CMD node -e "require('http').get('http://localhost:3001/login',r=>process.exit(r.statusCode<500?0:1)).on('error',()=>process.exit(1))"
+
 ENTRYPOINT ["/docker-entrypoint.sh"]

@@ -4,16 +4,9 @@ export default function LicenseFeatures({ features }: { features: string[] }) {
   if (features.length === 0) return null
   return (
     <Section title="Features">
-      <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+      <div className="flex gap-2 flex-wrap">
         {features.map(f => (
-          <span key={f} style={{
-            fontSize: 10,
-            letterSpacing: '0.12em',
-            color: 'var(--blue)',
-            border: '1px solid rgba(90,180,240,0.2)',
-            padding: '3px 10px',
-            textTransform: 'uppercase',
-          }}>
+          <span key={f} className="text-[10px] tracking-[0.12em] fg-blue border border-[rgba(90,180,240,0.2)] px-2.5 py-0.5 uppercase">
             {f}
           </span>
         ))}

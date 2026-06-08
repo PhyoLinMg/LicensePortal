@@ -30,7 +30,7 @@ describe('POST /api/admin/audit/prune', () => {
     expect(body.deleted).toBe(1)
     expect(body.days).toBe(90)
 
-    const remaining = await db.auditEvent.findMany()
+    const remaining = await db.auditEvent.findMany({ where: { type: 'VALIDATE' } })
     expect(remaining).toHaveLength(1)
     expect((remaining[0].payload as Record<string, unknown>).note).toBe('recent')
   })
@@ -42,6 +42,45 @@ describe('POST /api/admin/audit/prune', () => {
     const res = await PRUNE(req)
     expect(res.status).toBe(200)
     expect((await res.json()).days).toBe(90)
+  })
+
+  it('rejects days below minimum with 400', async () => {
+    const req = await adminRequest('http://localhost/api/admin/audit/prune', {
+      method: 'POST',
+      body: JSON.stringify({ days: 1 }),
+      headers: { 'Content-Type': 'application/json' },
+    })
+    const res = await PRUNE(req)
+    expect(res.status).toBe(400)
+    const body = await res.json()
+    expect(body.error).toBe('minimum_retention_days')
+    expect(body.min).toBe(90)
+  })
+
+  it('writes AUDIT_PRUNE_REJECTED event on rejected request', async () => {
+    const { db } = await import('@/lib/db')
+    const req = await adminRequest('http://localhost/api/admin/audit/prune', {
+      method: 'POST',
+      body: JSON.stringify({ days: 30 }),
+      headers: { 'Content-Type': 'application/json' },
+    })
+    await PRUNE(req)
+    const events = await db.auditEvent.findMany({ where: { type: 'AUDIT_PRUNE_REJECTED' } })
+    expect(events).toHaveLength(1)
+    expect((events[0].payload as Record<string, unknown>).requested_days).toBe(30)
+  })
+
+  it('writes AUDIT_PRUNE event before executing delete', async () => {
+    const { db } = await import('@/lib/db')
+    const req = await adminRequest('http://localhost/api/admin/audit/prune', {
+      method: 'POST',
+      body: JSON.stringify({ days: 90 }),
+      headers: { 'Content-Type': 'application/json' },
+    })
+    await PRUNE(req)
+    const events = await db.auditEvent.findMany({ where: { type: 'AUDIT_PRUNE' } })
+    expect(events).toHaveLength(1)
+    expect((events[0].payload as Record<string, unknown>).days).toBe(90)
   })
 
   it('returns 401 without auth', async () => {

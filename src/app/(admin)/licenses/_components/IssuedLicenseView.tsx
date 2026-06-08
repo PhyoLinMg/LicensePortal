@@ -2,7 +2,8 @@
 
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { primBtnStyle } from '../_lib/styles'
+import { primBtnCls } from '../_lib/styles'
+import clsx from 'clsx'
 
 export default function IssuedLicenseView({ licenseText, licenseId }: { licenseText: string; licenseId: string }) {
   const router = useRouter()
@@ -25,108 +26,48 @@ export default function IssuedLicenseView({ licenseText, licenseId }: { licenseT
   }
 
   return (
-    <>
-      <style>{`
-        .lic-btn:hover { background: var(--amber-d) !important; }
-        .lic-btn-sec:hover { color: var(--t1) !important; }
-      `}</style>
-      <div>
-        <div style={{
-          padding: '12px 16px',
-          border: '1px solid rgba(61,214,140,0.2)',
-          background: 'rgba(61,214,140,0.04)',
-          marginBottom: 28,
-        }}>
-          <div style={{ fontSize: 11, color: 'var(--green)', fontWeight: 500, marginBottom: 4 }}>
-            License issued & signed
-          </div>
-          <div style={{ fontSize: 10, color: 'var(--t2)' }}>
-            Download the .lic file and deliver to customer. Keep the private key secure.
-          </div>
-        </div>
+    <div>
+      <div className="px-4 py-3 border border-[rgba(61,214,140,0.2)] bg-[rgba(61,214,140,0.04)] mb-7">
+        <div className="text-[11px] fg-green font-medium mb-1">License issued & signed</div>
+        <div className="text-[10px] fg-t2">Download the .lic file and deliver to customer. Keep the private key secure.</div>
+      </div>
 
-        <div style={{ marginBottom: 24 }}>
-          <div style={{ fontSize: 9, letterSpacing: '0.22em', color: 'var(--tm)', textTransform: 'uppercase', marginBottom: 10 }}>
-            .lic Contents
-          </div>
-          <div style={{ background: 'var(--s1)', border: '1px solid var(--bs)', padding: '14px 16px' }}>
-            <textarea
-              readOnly
-              value={licenseText}
-              rows={4}
-              style={{
-                width: '100%',
-                background: 'transparent',
-                border: 'none',
-                fontSize: 10,
-                color: 'var(--t2)',
-                fontFamily: 'inherit',
-                resize: 'none',
-                outline: 'none',
-                lineHeight: 1.7,
-                wordBreak: 'break-all',
-              }}
-            />
-          </div>
-        </div>
-
-        <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap' }}>
-          <button onClick={download} className="lic-btn" style={primBtnStyle}>
-            Download .lic
-          </button>
-          <button
-            onClick={copyLic}
-            className="lic-btn-sec"
-            style={{
-              fontFamily: 'inherit',
-              fontSize: 10,
-              letterSpacing: '0.18em',
-              color: copied ? 'var(--green)' : 'var(--t2)',
-              background: 'none',
-              border: '1px solid var(--b)',
-              padding: '10px 16px',
-              cursor: 'pointer',
-              textTransform: 'uppercase',
-              transition: 'color 0.12s',
-            }}
-          >
-            {copied ? 'Copied ✓' : 'Copy Text'}
-          </button>
-          <button
-            onClick={() => router.push(`/licenses/${licenseId}`)}
-            className="lic-btn-sec"
-            style={{
-              fontFamily: 'inherit',
-              fontSize: 10,
-              letterSpacing: '0.18em',
-              color: 'var(--t2)',
-              background: 'none',
-              border: '1px solid var(--b)',
-              padding: '10px 16px',
-              cursor: 'pointer',
-              textTransform: 'uppercase',
-              transition: 'color 0.12s',
-            }}
-          >
-            View License
-          </button>
-          <button
-            onClick={() => router.push('/licenses')}
-            style={{
-              fontFamily: 'inherit',
-              fontSize: 10,
-              letterSpacing: '0.15em',
-              color: 'var(--tm)',
-              background: 'none',
-              border: 'none',
-              cursor: 'pointer',
-              textTransform: 'uppercase',
-            }}
-          >
-            ← Back to Licenses
-          </button>
+      <div className="mb-6">
+        <div className="text-[9px] tracking-[0.22em] fg-muted uppercase mb-2.5">.lic Contents</div>
+        <div className="bg-s1 bd px-4 py-3.5">
+          <textarea
+            readOnly
+            value={licenseText}
+            rows={4}
+            className="w-full bg-transparent border-0 text-[10px] fg-t2 font-[inherit] resize-none outline-none leading-[1.7] break-all"
+          />
         </div>
       </div>
-    </>
+
+      <div className="flex gap-3 flex-wrap">
+        <button onClick={download} className={primBtnCls}>Download .lic</button>
+        <button
+          onClick={copyLic}
+          className={clsx(
+            'lic-btn-sec font-[inherit] text-[10px] tracking-[0.18em] bg-none bd-b px-4 py-2.5 cursor-pointer uppercase transition-colors duration-[120ms]',
+            copied ? 'fg-green' : 'fg-t2',
+          )}
+        >
+          {copied ? 'Copied ✓' : 'Copy Text'}
+        </button>
+        <button
+          onClick={() => router.push(`/licenses/${licenseId}`)}
+          className="lic-btn-sec font-[inherit] text-[10px] tracking-[0.18em] fg-t2 bg-none bd-b px-4 py-2.5 cursor-pointer uppercase transition-colors duration-[120ms]"
+        >
+          View License
+        </button>
+        <button
+          onClick={() => router.push('/licenses')}
+          className="font-[inherit] text-[10px] tracking-[0.15em] fg-muted bg-none border-0 cursor-pointer uppercase"
+        >
+          ← Back to Licenses
+        </button>
+      </div>
+    </div>
   )
 }

@@ -7,11 +7,14 @@ describe('Admin products API', () => {
 
   // ── GET ──────────────────────────────────────────────────────────────────
 
-  it('GET returns empty list initially', async () => {
+  it('GET returns empty paginated list initially', async () => {
     const req = await adminRequest('http://localhost/api/admin/products')
     const res = await GET(req)
     expect(res.status).toBe(200)
-    expect(await res.json()).toEqual([])
+    const body = await res.json()
+    expect(body.data).toEqual([])
+    expect(body.pagination.total).toBe(0)
+    expect(res.headers.get('X-Total-Count')).toBe('0')
   })
 
   it('GET returns 401 without auth', async () => {
@@ -20,7 +23,7 @@ describe('Admin products API', () => {
     expect(res.status).toBe(401)
   })
 
-  it('GET excludes privateKeyEnc from response', async () => {
+  it('GET excludes privateKeyEnc from response in paginated shape', async () => {
     const createReq = await adminRequest('http://localhost/api/admin/products', {
       method: 'POST',
       body: JSON.stringify({ name: 'My Product', slug: 'my-prod' }),
@@ -30,10 +33,12 @@ describe('Admin products API', () => {
 
     const listReq = await adminRequest('http://localhost/api/admin/products')
     const res = await GET(listReq)
-    const products = await res.json()
-    expect(products).toHaveLength(1)
-    expect(products[0]).not.toHaveProperty('privateKeyEnc')
-    expect(products[0]).toHaveProperty('publicKeyB64')
+    const body = await res.json()
+    expect(body.data).toHaveLength(1)
+    expect(body.data[0]).not.toHaveProperty('privateKeyEnc')
+    expect(body.data[0]).toHaveProperty('publicKeyB64')
+    expect(body.pagination.total).toBe(1)
+    expect(res.headers.get('X-Total-Count')).toBe('1')
   })
 
   // ── POST ─────────────────────────────────────────────────────────────────

@@ -99,7 +99,7 @@ describe('POST /api/v1/validate', () => {
 
   // ── Signature / format errors ────────────────────────────────────────────
 
-  it('tampered license text returns 422 invalid_signature', async () => {
+  it('tampered license text returns 422 invalid_license', async () => {
     // Decode payload, mutate a field, re-encode — still valid JSON + valid product_id
     // so parsing passes, but the original signature no longer matches.
     const dot = licenseText.lastIndexOf('.')
@@ -110,7 +110,7 @@ describe('POST /api/v1/validate', () => {
     const tamperedB64 = Buffer.from(JSON.stringify(payload)).toString('base64url')
     const res = await POST(validateReq({ license_text: `${tamperedB64}.${sig}` }))
     expect(res.status).toBe(422)
-    expect((await res.json()).error).toBe('invalid_signature')
+    expect((await res.json()).error).toBe('invalid_license')
   })
 
   it('malformed token (no dot separator) returns 422 malformed_license', async () => {
@@ -119,7 +119,7 @@ describe('POST /api/v1/validate', () => {
     expect((await res.json()).error).toBe('malformed_license')
   })
 
-  it('unknown product slug returns 422 unknown_product', async () => {
+  it('unknown product slug returns 422 invalid_license', async () => {
     // Build a token whose payload has a different product_id
     const { buildLicenseText, canonicalJson } = await import('@/lib/crypto')
     const { generateProductKeypair } = await import('@/lib/crypto')
@@ -146,7 +146,7 @@ describe('POST /api/v1/validate', () => {
     const text = buildLicenseText(payload, foreignKeypair.privateKeyEnc)
     const res = await POST(validateReq({ license_text: text }))
     expect(res.status).toBe(422)
-    expect((await res.json()).error).toBe('unknown_product')
+    expect((await res.json()).error).toBe('invalid_license')
   })
 
   it('valid sig but license not in DB returns 404', async () => {

@@ -18,11 +18,15 @@ describe('Admin licenses API', () => {
 
   // ── GET list ─────────────────────────────────────────────────────────────
 
-  it('GET / returns empty list initially', async () => {
+  it('GET / returns empty paginated list initially', async () => {
     const req = await adminRequest('http://localhost/api/admin/licenses')
     const res = await LIST_GET(req)
     expect(res.status).toBe(200)
-    expect(await res.json()).toEqual([])
+    const body = await res.json()
+    expect(body.data).toEqual([])
+    expect(body.pagination.total).toBe(0)
+    expect(body.pagination.page).toBe(1)
+    expect(res.headers.get('X-Total-Count')).toBe('0')
   })
 
   it('GET / returns 401 without auth', async () => {
@@ -31,7 +35,7 @@ describe('Admin licenses API', () => {
     expect(res.status).toBe(401)
   })
 
-  it('GET / strips licenseText from list view', async () => {
+  it('GET / strips licenseText from list view and returns paginated shape', async () => {
     const createReq = await adminRequest('http://localhost/api/admin/licenses', {
       method: 'POST',
       body: JSON.stringify({
@@ -46,10 +50,12 @@ describe('Admin licenses API', () => {
 
     const listReq = await adminRequest('http://localhost/api/admin/licenses')
     const res = await LIST_GET(listReq)
-    const licenses = await res.json()
-    expect(licenses).toHaveLength(1)
-    expect(licenses[0]).not.toHaveProperty('licenseText')
-    expect(licenses[0]).not.toHaveProperty('payloadJson')
+    const body = await res.json()
+    expect(body.data).toHaveLength(1)
+    expect(body.data[0]).not.toHaveProperty('licenseText')
+    expect(body.data[0]).not.toHaveProperty('payloadJson')
+    expect(body.pagination.total).toBe(1)
+    expect(res.headers.get('X-Total-Count')).toBe('1')
   })
 
   // ── POST create ──────────────────────────────────────────────────────────

@@ -5,3 +5,4 @@ node_modules/
 *.lic
 graphify-out/
 audit_license_file.md
+cred.txt

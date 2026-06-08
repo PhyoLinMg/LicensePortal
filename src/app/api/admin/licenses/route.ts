@@ -1,26 +1,48 @@
 import { NextRequest } from 'next/server'
+import { z } from 'zod'
 import { db } from '@/lib/db'
 import { requireAdminAuth } from '@/lib/auth'
 import { issueLicense } from '@/lib/license'
+import { parsePagination, paginatedResponse } from '@/lib/pagination'
 import { randomUUID } from 'crypto'
 import type { Prisma } from '@prisma/client'
+
+const IssueLicenseSchema = z.object({
+  productId: z.string().uuid(),
+  customerId: z.string().uuid(),
+  tier: z.string().min(1).max(64),
+  features: z.array(z.string().max(64)).max(100).optional(),
+  limits: z.record(z.string().max(64), z.number()).optional(),
+  notBefore: z.string().datetime().optional(),
+  expiresAt: z.string().datetime(),
+  gracePeriodDays: z.number().int().min(0).max(365).optional(),
+  heartbeatUrl: z.string().url().max(2048).optional(),
+})
 
 export async function GET(req: NextRequest) {
   const err = await requireAdminAuth(req)
   if (err) return err
 
-  const licenses = await db.license.findMany({
-    orderBy: { issuedAt: 'desc' },
+  const pagination = parsePagination(req)
+  const query = {
+    orderBy: { issuedAt: 'desc' } as const,
     include: {
       customer: { select: { id: true, name: true, email: true } },
       product: { select: { id: true, name: true, slug: true } },
       _count: { select: { instances: true } },
     },
-  })
+  }
 
-  // strip licenseText from list view (can be large)
-  return Response.json(
-    licenses.map(({ licenseText: _, payloadJson: __, ...l }) => l)
+  const [licenses, total] = await db.$transaction([
+    db.license.findMany({ ...query, skip: pagination.skip, take: pagination.take }),
+    db.license.count(),
+  ])
+
+  return paginatedResponse(
+    licenses.map(({ licenseText: _, payloadJson: __, ...l }) => l),
+    total,
+    pagination,
+    req.url,
   )
 }
 
@@ -28,7 +50,15 @@ export async function POST(req: NextRequest) {
   const err = await requireAdminAuth(req)
   if (err) return err
 
-  const body = await req.json()
+  let rawBody: unknown
+  try { rawBody = await req.json() } catch {
+    return Response.json({ error: 'invalid_json' }, { status: 400 })
+  }
+
+  const parsed = IssueLicenseSchema.safeParse(rawBody)
+  if (!parsed.success) {
+    return Response.json({ error: 'validation_error', details: parsed.error.flatten().fieldErrors }, { status: 400 })
+  }
   const {
     productId,
     customerId,
@@ -39,14 +69,7 @@ export async function POST(req: NextRequest) {
     expiresAt,
     gracePeriodDays = 21,
     heartbeatUrl,
-  } = body
-
-  if (!productId || !customerId || !tier || !expiresAt) {
-    return Response.json(
-      { error: 'productId, customerId, tier, expiresAt required' },
-      { status: 400 }
-    )
-  }
+  } = parsed.data
 
   const [product, customer] = await Promise.all([
     db.product.findUnique({ where: { id: productId } }),

@@ -1,25 +1,31 @@
 import { NextRequest } from 'next/server'
 
+// Warn once at startup so operators know rate-limit IP isolation is inactive.
+if (process.env.NODE_ENV === 'production' && !process.env.TRUSTED_PROXY_HEADER) {
+  console.warn(
+    '[security] TRUSTED_PROXY_HEADER is not set. ' +
+    'IP-based rate limiting is disabled — all clients share a single bucket. ' +
+    'Set to the header your reverse proxy writes (e.g. "x-real-ip" or "cf-connecting-ip").',
+  )
+}
+
 /**
  * Extract the real client IP from a request.
  *
- * Priority:
- *  1. CF-Connecting-IP  — set by Cloudflare, single trusted value
- *  2. X-Real-IP         — set by nginx / most reverse proxies
- *  3. X-Forwarded-For   — rightmost untrusted entry (last hop added by our proxy)
+ * Reads only the header named by TRUSTED_PROXY_HEADER (e.g. "cf-connecting-ip"
+ * or "x-real-ip"). That header must be set exclusively by a trusted reverse
+ * proxy — never forwarded from clients.
  *
- * Falls back to null when running without a reverse proxy (direct connections
- * expose no IP header in Next.js edge/node runtime).
+ * Returns null when TRUSTED_PROXY_HEADER is unset (direct deployment, no proxy)
+ * or when the named header is absent. Callers that fall back to 'unknown' will
+ * share a single rate-limit bucket, which is acceptable for direct deployments
+ * that should not be internet-facing.
  *
- * IMPORTANT: this is only trustworthy when the server sits behind exactly one
- * trusted proxy that sets one of the above headers. Multi-hop or untrusted
- * proxies should use the rightmost X-Forwarded-For entry, which this does.
+ * X-Forwarded-For is intentionally excluded: it can be spoofed by clients to
+ * create a fresh rate-limit bucket per request.
  */
 export function getClientIp(req: NextRequest): string | null {
-  return (
-    req.headers.get('cf-connecting-ip') ??
-    req.headers.get('x-real-ip') ??
-    req.headers.get('x-forwarded-for')?.split(',').at(-1)?.trim() ??
-    null
-  )
+  const header = process.env.TRUSTED_PROXY_HEADER?.toLowerCase().trim()
+  if (!header) return null
+  return req.headers.get(header) ?? null
 }

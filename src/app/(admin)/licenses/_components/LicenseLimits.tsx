@@ -4,13 +4,13 @@ export default function LicenseLimits({ limits }: { limits: Record<string, numbe
   if (Object.keys(limits).length === 0) return null
   return (
     <Section title="Limits">
-      <div style={{ display: 'flex', gap: 16, flexWrap: 'wrap' }}>
+      <div className="flex gap-4 flex-wrap">
         {Object.entries(limits).map(([k, v]) => (
-          <div key={k} style={{ border: '1px solid var(--bs)', padding: '10px 16px', minWidth: 100 }}>
-            <div style={{ fontSize: 9, letterSpacing: '0.15em', color: 'var(--tm)', marginBottom: 4, textTransform: 'uppercase' }}>
+          <div key={k} className="bd px-4 py-2.5 min-w-[100px]">
+            <div className="text-[9px] tracking-[0.15em] fg-muted mb-1 uppercase">
               {k.replace(/_/g, ' ')}
             </div>
-            <div style={{ fontSize: 22, fontWeight: 600, color: 'var(--amber)', letterSpacing: '-0.03em' }}>
+            <div className="text-[22px] font-semibold fg-amber tracking-[-0.03em]">
               {v}
             </div>
           </div>

@@ -12,13 +12,16 @@ const GATE_BYPASS_PREFIXES = (process.env.PROXY_BYPASS_PREFIXES ?? '')
   .map((s) => s.trim())
   .filter(Boolean)
 
-const HOP_BY_HOP = new Set([
-  'connection',
-  'keep-alive',
-  'transfer-encoding',
-  'upgrade',
-  'host',
-  'content-length',
+// Deny-by-default: only these headers are forwarded to the upstream.
+// All others (including x-*, cookie, authorization) are dropped to prevent
+// header-trust privilege escalation against the upstream.
+// Add cookie or authorization per-deployment only when your upstream requires them.
+const ALLOWED_REQUEST_HEADERS = new Set([
+  'content-type',
+  'accept',
+  'accept-encoding',
+  'accept-language',
+  'user-agent',
 ])
 
 type GateDenial = { status: 402; error: string }
@@ -56,7 +59,21 @@ export async function gate(path: string[]): Promise<NextResponse | null> {
   return denial ? NextResponse.json({ error: denial.error }, { status: 402 }) : null
 }
 
-function stripHopByHop(headers: Headers): Headers {
+// Hop-by-hop headers that must never be forwarded in either direction.
+const HOP_BY_HOP = new Set([
+  'connection', 'keep-alive', 'transfer-encoding', 'upgrade', 'host', 'content-length',
+])
+
+function allowlistedRequestHeaders(headers: Headers): Headers {
+  const out = new Headers()
+  headers.forEach((value, key) => {
+    const lower = key.toLowerCase()
+    if (ALLOWED_REQUEST_HEADERS.has(lower)) out.set(key, value)
+  })
+  return out
+}
+
+function stripHopByHopResponse(headers: Headers): Headers {
   const out = new Headers()
   headers.forEach((value, key) => {
     if (!HOP_BY_HOP.has(key.toLowerCase())) out.set(key, value)
@@ -73,13 +90,13 @@ export async function forward(req: NextRequest, path: string[]): Promise<NextRes
   const hasBody = !['GET', 'HEAD'].includes(req.method)
   const res = await fetch(url, {
     method: req.method,
-    headers: stripHopByHop(req.headers),
+    headers: allowlistedRequestHeaders(req.headers),
     body: hasBody ? req.body : undefined,
     // @ts-ignore — duplex required for streaming request bodies in Node 18+
     duplex: 'half',
   })
   return new NextResponse(res.body, {
     status: res.status,
-    headers: stripHopByHop(res.headers),
+    headers: stripHopByHopResponse(res.headers),
   })
 }

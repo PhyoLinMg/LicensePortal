@@ -1,6 +1,6 @@
 import { NextRequest } from 'next/server'
 import { SignJWT } from 'jose'
-import { generateKeyPairSync, createPrivateKey, sign as cryptoSign } from 'crypto'
+import { generateKeyPairSync, createPrivateKey, sign as cryptoSign, randomUUID } from 'crypto'
 import { db } from '@/lib/db'
 import { canonicalJson } from '@/lib/crypto'
 import { generateProductKeypair } from '@/lib/crypto'
@@ -14,10 +14,15 @@ export { TEST_PASSWORD }
 
 export async function createAdminToken(): Promise<string> {
   const secret = new TextEncoder().encode(process.env.JWT_SECRET!)
-  return new SignJWT({ role: 'admin' })
+  const jti = randomUUID()
+  const expiresAt = new Date(Date.now() + 2 * 60 * 60 * 1000)
+
+  await db.session.create({ data: { jti, expiresAt } })
+
+  return new SignJWT({ role: 'admin', jti })
     .setProtectedHeader({ alg: 'HS256' })
     .setIssuedAt()
-    .setExpirationTime('8h')
+    .setExpirationTime('2h')
     .sign(secret)
 }
 
@@ -44,7 +49,7 @@ export function unauthRequest(
 
 export async function truncateAll(): Promise<void> {
   await db.$executeRawUnsafe(
-    `TRUNCATE TABLE "AuditEvent", "Instance", "License", "Customer", "Product" CASCADE`,
+    `TRUNCATE TABLE "AuditEvent", "Instance", "License", "Customer", "Product", "Session" CASCADE`,
   )
 }
 

@@ -23,33 +23,16 @@ export default async function ProductsPage() {
 
   return (
     <>
-      <style>{`
-        .key-block { background: var(--bs); }
-        .key-block:hover { background: var(--s2) !important; }
-      `}</style>
-      <div style={{ padding: '32px 32px 0' }}>
+      <div className="px-8 pt-8">
         {/* Header */}
-        <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', paddingBottom: 24, borderBottom: '1px solid var(--bs)' }}>
+        <div className="flex items-end justify-between pb-6 bdb">
           <div>
-            <p style={{ fontSize: 9, letterSpacing: '0.28em', color: 'var(--tm)', marginBottom: 8, textTransform: 'uppercase' }}>
-              License Portal
-            </p>
-            <h1 style={{ fontSize: 20, fontWeight: 600, color: 'var(--t1)', margin: 0, letterSpacing: '-0.02em' }}>
-              Products
-            </h1>
+            <p className="text-[9px] tracking-[0.28em] fg-muted mb-2 uppercase">License Portal</p>
+            <h1 className="text-[20px] font-semibold fg-t1 m-0 tracking-[-0.02em]">Products</h1>
           </div>
           <Link
             href="/products/new"
-            style={{
-              fontSize: 10,
-              letterSpacing: '0.2em',
-              color: '#07080d',
-              background: 'var(--amber)',
-              padding: '9px 18px',
-              textDecoration: 'none',
-              textTransform: 'uppercase',
-              fontWeight: 600,
-            }}
+            className="text-[10px] tracking-[0.2em] fg-dark bg-amber px-[18px] py-[9px] no-underline uppercase font-semibold"
           >
             Add Product →
           </Link>
@@ -57,62 +40,38 @@ export default async function ProductsPage() {
       </div>
 
       {/* List */}
-      <div style={{ padding: '24px 32px', display: 'flex', flexDirection: 'column', gap: 16 }}>
+      <div className="px-8 py-6 flex flex-col gap-4">
         {products.length === 0 ? (
-          <div style={{ fontSize: 11, color: 'var(--tm)', letterSpacing: '0.15em', padding: '24px 0' }}>
+          <div className="text-[11px] fg-muted tracking-[0.15em] py-6">
             No products yet. Add one to start issuing licenses.
           </div>
         ) : (
-          products.map((p, i) => (
-            <div
-              key={p.id}
-              style={{
-                border: '1px solid var(--bs)',
-                padding: '18px 20px',
-                animation: `slideRight 0.22s ease ${i * 30}ms both`,
-              }}
-            >
+          products.map((p) => (
+            <div key={p.id} className="bd px-5 py-[18px] slide-in">
               {/* Product header */}
-              <div style={{ display: 'flex', alignItems: 'baseline', gap: 12, marginBottom: 14 }}>
-                <span style={{ fontSize: 14, fontWeight: 500, color: 'var(--t1)' }}>{p.name}</span>
-                <span style={{ fontSize: 10, color: 'var(--t2)' }}>{p.slug}</span>
-                <span style={{ fontSize: 9, letterSpacing: '0.15em', color: 'var(--tm)', textTransform: 'uppercase' }}>
-                  key_id={p.keyId}
-                </span>
-                <span style={{ marginLeft: 'auto', fontSize: 9, color: 'var(--tm)' }}>
+              <div className="flex items-baseline gap-3 mb-3.5">
+                <span className="text-sm font-medium fg-t1">{p.name}</span>
+                <span className="text-[10px] fg-t2">{p.slug}</span>
+                <span className="text-[9px] tracking-[0.15em] fg-muted uppercase">key_id={p.keyId}</span>
+                <span className="ml-auto text-[9px] fg-muted">
                   {p._count.licenses} license{p._count.licenses !== 1 ? 's' : ''}
                 </span>
               </div>
 
               {/* Public key */}
               <div>
-                <div style={{ fontSize: 9, letterSpacing: '0.2em', color: 'var(--tm)', textTransform: 'uppercase', marginBottom: 8 }}>
+                <div className="text-[9px] tracking-[0.2em] fg-muted uppercase mb-2">
                   Public Key — SubjectPublicKeyInfo DER / Base64
                 </div>
-                <div
-                  className="key-block"
-                  style={{
-                    display: 'flex',
-                    alignItems: 'flex-start',
-                    gap: 12,
-                    padding: '10px 14px',
-                    transition: 'background 0.1s',
-                  }}
-                >
-                  <code style={{
-                    fontSize: 10,
-                    color: 'var(--t2)',
-                    flex: 1,
-                    wordBreak: 'break-all',
-                    lineHeight: 1.7,
-                  }}>
+                <div className="key-block flex items-start gap-3 px-3.5 py-2.5">
+                  <code className="text-[10px] fg-t2 flex-1 break-all leading-[1.7]">
                     {p.publicKeyB64}
                   </code>
                   <CopyButton text={p.publicKeyB64} />
                 </div>
-                <div style={{ fontSize: 9, color: 'var(--tm)', marginTop: 6 }}>
+                <div className="text-[9px] fg-muted mt-1.5">
                   Embed in product binary under{' '}
-                  <code style={{ color: 'var(--t2)' }}>app.license.public-keys.{p.keyId}</code>
+                  <code className="fg-t2">app.license.public-keys.{p.keyId}</code>
                 </div>
               </div>
             </div>

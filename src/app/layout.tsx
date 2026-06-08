@@ -1,5 +1,6 @@
 import type { Metadata } from 'next'
 import { IBM_Plex_Mono } from 'next/font/google'
+import { headers } from 'next/headers'
 import './globals.css'
 
 const mono = IBM_Plex_Mono({
@@ -13,10 +14,13 @@ export const metadata: Metadata = {
   description: 'License issuance and management portal',
 }
 
-export default function RootLayout({ children }: { children: React.ReactNode }) {
+export default async function RootLayout({ children }: { children: React.ReactNode }) {
+  // Read nonce set by middleware — Next.js uses it to nonce its own inline bootstrap scripts.
+  const nonce = (await headers()).get('x-nonce') ?? undefined
+
   return (
-    <html lang="en" className={mono.variable}>
-      <body style={{ fontFamily: 'var(--font-mono)', background: 'var(--bg)', color: 'var(--t1)', minHeight: '100vh' }}>
+    <html lang="en" className={mono.variable} {...(nonce ? { nonce } : {})}>
+      <body className="min-h-screen">
         {children}
       </body>
     </html>

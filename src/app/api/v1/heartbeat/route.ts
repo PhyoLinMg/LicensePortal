@@ -64,10 +64,21 @@ export async function POST(req: NextRequest) {
     instance_public_key,
   } = parsed.data
 
-  // Rate-limit per license_id (not IP) — IP keying blocks all customers behind NAT.
-  // 5 requests/min is generous for legitimate hourly polling + retries.
-  if (!allow(`heartbeat:${licenseId}`, 5, 60_000)) {
-    return hbError(429, 'rate_limited')
+  // Rate-limit per licenseId+IP pair: prevents a third party with the license file
+  // from exhausting the 5-req/min window before the legitimate instance can poll.
+  // Keying on licenseId alone lets any holder of the license token DoS the real instance.
+  const ip = getClientIp(req) ?? 'unknown'
+  const rl = allow(`heartbeat:${licenseId}:${ip}`, 5, 60_000)
+  if (!rl.ok) {
+    return new Response(JSON.stringify({ error: 'rate_limited' }), {
+      status: 429,
+      headers: {
+        'Content-Type': 'application/json',
+        'X-RateLimit-Limit': String(rl.limit),
+        'X-RateLimit-Remaining': '0',
+        'X-RateLimit-Reset': String(Math.ceil(rl.resetAt / 1000)),
+      },
+    })
   }
 
   // Load license

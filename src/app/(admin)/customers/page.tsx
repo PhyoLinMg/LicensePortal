@@ -20,104 +20,56 @@ export default async function CustomersPage() {
 
   return (
     <>
-      <style>{`
-        .cust-row:hover { background: var(--s2) !important; }
-        .issue-link:hover { color: var(--amber) !important; }
-      `}</style>
-      <div style={{ padding: '32px 32px 0' }}>
+      <div className="px-8 pt-8">
         {/* Header */}
-        <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', paddingBottom: 24, borderBottom: '1px solid var(--bs)' }}>
+        <div className="flex items-end justify-between pb-6 bdb">
           <div>
-            <p style={{ fontSize: 9, letterSpacing: '0.28em', color: 'var(--tm)', marginBottom: 8, textTransform: 'uppercase' }}>
-              License Portal
-            </p>
-            <h1 style={{ fontSize: 20, fontWeight: 600, color: 'var(--t1)', margin: 0, letterSpacing: '-0.02em' }}>
-              Customers
-            </h1>
+            <p className="text-[9px] tracking-[0.28em] fg-muted mb-2 uppercase">License Portal</p>
+            <h1 className="text-[20px] font-semibold fg-t1 m-0 tracking-[-0.02em]">Customers</h1>
           </div>
           <Link
             href="/customers/new"
-            style={{
-              fontSize: 10,
-              letterSpacing: '0.2em',
-              color: '#07080d',
-              background: 'var(--amber)',
-              padding: '9px 18px',
-              textDecoration: 'none',
-              textTransform: 'uppercase',
-              fontWeight: 600,
-            }}
+            className="text-[10px] tracking-[0.2em] fg-dark bg-amber px-[18px] py-[9px] no-underline uppercase font-semibold"
           >
             Add Customer →
           </Link>
         </div>
 
         {/* Count */}
-        <div style={{ padding: '14px 0', borderBottom: '1px solid var(--bs)' }}>
-          <span style={{ fontSize: 9, letterSpacing: '0.2em', color: 'var(--tm)', textTransform: 'uppercase' }}>
+        <div className="py-3.5 bdb">
+          <span className="text-[9px] tracking-[0.2em] fg-muted uppercase">
             {customers.length} customer{customers.length !== 1 ? 's' : ''} registered
           </span>
         </div>
       </div>
 
       {/* List */}
-      <div style={{ padding: '16px 0' }}>
+      <div className="py-4">
         {customers.length === 0 ? (
-          <div style={{ padding: '48px 32px', fontSize: 11, color: 'var(--tm)', letterSpacing: '0.15em' }}>
-            No customers yet.
-          </div>
+          <div className="px-8 py-12 text-[11px] fg-muted tracking-[0.15em]">No customers yet.</div>
         ) : (
-          customers.map((c, i) => (
+          customers.map((c) => (
             <div
               key={c.id}
-              className="cust-row"
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'space-between',
-                padding: '14px 32px',
-                borderBottom: '1px solid var(--bs)',
-                borderLeft: '3px solid transparent',
-                transition: 'background 0.1s',
-                animation: `slideRight 0.2s ease ${i * 25}ms both`,
-              }}
+              className="cust-row flex items-center justify-between px-8 py-3.5 bdb bdl-none transition-[background] duration-100 slide-in"
             >
-              <div style={{ flex: 1, minWidth: 0 }}>
-                <div style={{ display: 'flex', alignItems: 'baseline', gap: 10, marginBottom: 4 }}>
-                  <span style={{ fontSize: 13, fontWeight: 500, color: 'var(--t1)' }}>
-                    {c.name}
-                  </span>
-                  <span style={{
-                    fontSize: 9,
-                    letterSpacing: '0.15em',
-                    color: 'var(--tm)',
-                    border: '1px solid var(--bs)',
-                    padding: '1px 5px',
-                  }}>
+              <div className="flex-1 min-w-0">
+                <div className="flex items-baseline gap-2.5 mb-1">
+                  <span className="text-[13px] font-medium fg-t1">{c.name}</span>
+                  <span className="text-[9px] tracking-[0.15em] fg-muted bd px-[5px] py-px">
                     {c._count.licenses} LIC
                   </span>
                 </div>
-                <div style={{ display: 'flex', gap: 16, fontSize: 10, color: 'var(--tm)' }}>
+                <div className="flex gap-4 text-[10px] fg-muted">
                   <span>{c.email ?? '—'}</span>
                   {c.notes && (
-                    <span style={{ color: 'var(--tm)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: 300 }}>
-                      {c.notes}
-                    </span>
+                    <span className="fg-muted truncate max-w-[300px]">{c.notes}</span>
                   )}
                 </div>
               </div>
               <Link
                 href={`/licenses/new?customerId=${c.id}`}
-                className="issue-link"
-                style={{
-                  fontSize: 10,
-                  letterSpacing: '0.15em',
-                  color: 'var(--t2)',
-                  textDecoration: 'none',
-                  textTransform: 'uppercase',
-                  transition: 'color 0.1s',
-                  flexShrink: 0,
-                }}
+                className="issue-link text-[10px] tracking-[0.15em] fg-t2 no-underline uppercase transition-colors duration-100 shrink-0"
               >
                 Issue License →
               </Link>

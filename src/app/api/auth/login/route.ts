@@ -27,7 +27,8 @@ function safeEqual(a: string, b: string): boolean {
 export async function POST(req: NextRequest) {
   const ip = getClientIp(req) ?? 'unknown'
   // 10 attempts per 15 minutes per IP
-  if (!allow(`login:${ip}`, 10, 15 * 60_000)) {
+  const rl = allow(`login:${ip}`, 10, 15 * 60_000)
+  if (!rl.ok) {
     return Response.json({ error: 'rate_limited' }, { status: 429 })
   }
 

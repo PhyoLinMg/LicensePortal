@@ -2,6 +2,7 @@
 
 import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
+import clsx from 'clsx'
 
 const NAV = [
   { href: '/licenses',   label: 'Licenses'   },
@@ -21,88 +22,45 @@ export default function AdminNav() {
   }
 
   return (
-    <>
-      <style>{`
-        .nav-link { transition: color 0.1s; }
-        .nav-link:hover { color: var(--t1) !important; }
-        .logout-btn:hover { color: var(--t2) !important; }
-      `}</style>
-      <aside style={{
-        width: 210,
-        background: 'var(--s1)',
-        borderRight: '1px solid var(--bs)',
-        display: 'flex',
-        flexDirection: 'column',
-        flexShrink: 0,
-        minHeight: '100vh',
-      }}>
-        {/* Logo */}
-        <div style={{ padding: '22px 22px 18px', borderBottom: '1px solid var(--bs)' }}>
-          <div style={{ fontSize: 12, letterSpacing: '0.35em', color: 'var(--amber)', fontWeight: 600 }}>
-            LSRV
-          </div>
-          <div style={{ fontSize: 9, letterSpacing: '0.18em', color: 'var(--tm)', marginTop: 3, textTransform: 'uppercase' }}>
-            License Portal
-          </div>
-        </div>
+    <aside className="w-[210px] bg-s1 bdr flex flex-col shrink-0 min-h-screen">
+      {/* Logo */}
+      <div className="px-[22px] pt-[22px] pb-[18px] bdb">
+        <div className="text-xs tracking-[0.35em] fg-amber font-semibold">LSRV</div>
+        <div className="text-[9px] tracking-[0.18em] fg-muted mt-[3px] uppercase">License Portal</div>
+      </div>
 
-        {/* Nav */}
-        <nav style={{ flex: 1, padding: '10px 0' }}>
-          {NAV.map((n) => {
-            const active = pathname === n.href || pathname.startsWith(n.href + '/')
-            return (
-              <Link
-                key={n.href}
-                href={n.href}
-                className="nav-link"
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: 10,
-                  padding: '9px 22px',
-                  borderLeft: `2px solid ${active ? 'var(--amber)' : 'transparent'}`,
-                  color: active ? 'var(--amber)' : 'var(--t2)',
-                  textDecoration: 'none',
-                  fontSize: 11,
-                  letterSpacing: '0.1em',
-                  textTransform: 'uppercase',
-                }}
-              >
-                <span style={{
-                  width: 5,
-                  height: 5,
-                  borderRadius: '50%',
-                  background: active ? 'var(--amber)' : 'var(--b)',
-                  flexShrink: 0,
-                  transition: 'background 0.1s',
-                }} />
-                {n.label}
-              </Link>
-            )
-          })}
-        </nav>
+      {/* Nav */}
+      <nav className="flex-1 py-2.5">
+        {NAV.map((n) => {
+          const active = pathname === n.href || pathname.startsWith(n.href + '/')
+          return (
+            <Link
+              key={n.href}
+              href={n.href}
+              className={clsx(
+                'nav-link flex items-center gap-2.5 px-[22px] py-[9px] no-underline text-[11px] tracking-[0.1em] uppercase',
+                active ? 'fg-amber border-l-2 border-[var(--amber)]' : 'fg-t2 border-l-2 border-transparent',
+              )}
+            >
+              <span className={clsx(
+                'w-[5px] h-[5px] rounded-full shrink-0 transition-[background] duration-100',
+                active ? 'bg-amber' : 'bg-[var(--b)]',
+              )} />
+              {n.label}
+            </Link>
+          )
+        })}
+      </nav>
 
-        {/* Logout */}
-        <div style={{ padding: '14px 22px', borderTop: '1px solid var(--bs)' }}>
-          <button
-            onClick={logout}
-            className="logout-btn"
-            style={{
-              fontFamily: 'inherit',
-              fontSize: 9,
-              letterSpacing: '0.2em',
-              color: 'var(--tm)',
-              background: 'none',
-              border: 'none',
-              cursor: 'pointer',
-              padding: 0,
-              textTransform: 'uppercase',
-            }}
-          >
-            Sign Out →
-          </button>
-        </div>
-      </aside>
-    </>
+      {/* Logout */}
+      <div className="px-[22px] py-3.5 bdt">
+        <button
+          onClick={logout}
+          className="logout-btn font-[inherit] text-[9px] tracking-[0.2em] fg-muted bg-none border-0 cursor-pointer p-0 uppercase"
+        >
+          Sign Out →
+        </button>
+      </div>
+    </aside>
   )
 }

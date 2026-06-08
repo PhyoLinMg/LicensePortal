@@ -22,9 +22,17 @@ const ValidateBodySchema = z.object({
 
 export async function POST(req: NextRequest) {
   const ip = getClientIp(req) ?? 'unknown'
-  // 30 requests per minute per IP
-  if (!allow(`validate:${ip}`, 30, 60_000)) {
-    return Response.json({ error: 'rate_limited' }, { status: 429 })
+  const rl = allow(`validate:${ip}`, 30, 60_000)
+  if (!rl.ok) {
+    return new Response(JSON.stringify({ error: 'rate_limited' }), {
+      status: 429,
+      headers: {
+        'Content-Type': 'application/json',
+        'X-RateLimit-Limit': String(rl.limit),
+        'X-RateLimit-Remaining': '0',
+        'X-RateLimit-Reset': String(Math.ceil(rl.resetAt / 1000)),
+      },
+    })
   }
 
   let body: unknown
@@ -55,12 +63,14 @@ export async function POST(req: NextRequest) {
   }
 
   const product = await db.product.findUnique({ where: { slug: productId } })
+  // Collapse unknown_product + invalid_signature into one code — prevents
+  // product slug enumeration by distinguishing "slug exists" from "slug absent".
   if (!product) {
-    return Response.json({ state: 'INVALID', error: 'unknown_product' }, { status: 422 })
+    return Response.json({ state: 'INVALID', error: 'invalid_license' }, { status: 422 })
   }
 
   if (!verifyLicenseText(license_text, product.publicKeyB64)) {
-    return Response.json({ state: 'INVALID', error: 'invalid_signature' }, { status: 422 })
+    return Response.json({ state: 'INVALID', error: 'invalid_license' }, { status: 422 })
   }
 
   const license = await db.license.findUnique({ where: { id: licenseId } })

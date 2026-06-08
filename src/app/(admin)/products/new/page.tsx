@@ -2,6 +2,12 @@
 
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
+import clsx from 'clsx'
+
+const inputCls = 'form-input w-full bg-transparent bdb-b py-1.5 pb-2 text-[13px] fg-t1 font-[inherit]'
+const lblCls = 'block text-[9px] tracking-[0.25em] fg-muted mb-2.5 uppercase'
+const primBtnCls = 'form-btn-primary font-[inherit] text-[10px] tracking-[0.22em] font-semibold fg-dark bg-amber border-0 px-5 py-[11px] cursor-pointer uppercase transition-[background] duration-[120ms]'
+const cancelBtnCls = 'form-btn-cancel font-[inherit] text-[10px] tracking-[0.18em] fg-muted bg-none border-0 cursor-pointer uppercase transition-colors duration-100'
 
 export default function NewProductPage() {
   const router = useRouter()
@@ -56,294 +62,112 @@ export default function NewProductPage() {
 
   if (created) {
     return (
-      <>
-        <style>{`
-          .key-copy-btn:hover { color: var(--amber) !important; }
-        `}</style>
-        <div style={{ padding: '32px 32px' }}>
-          <div style={{ paddingBottom: 24, borderBottom: '1px solid var(--bs)', marginBottom: 32 }}>
-            <p style={{ fontSize: 9, letterSpacing: '0.28em', color: 'var(--tm)', marginBottom: 8, textTransform: 'uppercase' }}>
-              Products / New
-            </p>
-            <h1 style={{ fontSize: 20, fontWeight: 600, color: 'var(--t1)', margin: 0, letterSpacing: '-0.02em' }}>
-              Keypair Generated
-            </h1>
-          </div>
-
-          {/* Success notice */}
-          <div style={{
-            padding: '12px 16px',
-            border: '1px solid rgba(61,214,140,0.2)',
-            background: 'rgba(61,214,140,0.04)',
-            marginBottom: 28,
-            fontSize: 11,
-            color: 'var(--green)',
-            letterSpacing: '0.04em',
-          }}>
-            Product created — Ed25519 keypair generated. Private key encrypted at rest.
-          </div>
-
-          {/* Public key */}
-          <div style={{ marginBottom: 28, maxWidth: 640 }}>
-            <div style={{ fontSize: 9, letterSpacing: '0.22em', color: 'var(--tm)', textTransform: 'uppercase', marginBottom: 10 }}>
-              Public Key — embed in product binary
-            </div>
-            <div style={{ fontSize: 9, color: 'var(--tm)', marginBottom: 10 }}>
-              Copy into{' '}
-              <code style={{ color: 'var(--t2)' }}>application.yml</code>
-              {' '}under{' '}
-              <code style={{ color: 'var(--t2)' }}>app.license.public-keys.{created.keyId}</code>
-            </div>
-            <div style={{
-              background: 'var(--s1)',
-              border: '1px solid var(--bs)',
-              padding: '14px 16px',
-              display: 'flex',
-              gap: 14,
-              alignItems: 'flex-start',
-            }}>
-              <code style={{
-                fontSize: 10,
-                color: 'var(--t2)',
-                flex: 1,
-                wordBreak: 'break-all',
-                lineHeight: 1.75,
-              }}>
-                {created.publicKeyB64}
-              </code>
-              <button
-                onClick={() => copy(created.publicKeyB64)}
-                className="key-copy-btn"
-                style={{
-                  fontFamily: 'inherit',
-                  fontSize: 9,
-                  letterSpacing: '0.2em',
-                  color: copied ? 'var(--green)' : 'var(--t2)',
-                  background: 'none',
-                  border: 'none',
-                  cursor: 'pointer',
-                  textTransform: 'uppercase',
-                  flexShrink: 0,
-                  transition: 'color 0.15s',
-                }}
-              >
-                {copied ? 'Copied ✓' : 'Copy'}
-              </button>
-            </div>
-          </div>
-
-          {/* Meta */}
-          <div style={{
-            display: 'grid',
-            gridTemplateColumns: '1fr 1fr',
-            gap: 16,
-            maxWidth: 320,
-            padding: '16px 0',
-            borderTop: '1px solid var(--bs)',
-            borderBottom: '1px solid var(--bs)',
-            marginBottom: 28,
-          }}>
-            <MetaItem label="Slug" value={created.slug} />
-            <MetaItem label="Key ID" value={created.keyId} />
-          </div>
-
-          <button
-            onClick={() => router.push('/products')}
-            style={{
-              fontFamily: 'inherit',
-              fontSize: 10,
-              letterSpacing: '0.2em',
-              color: '#07080d',
-              background: 'var(--amber)',
-              border: 'none',
-              padding: '10px 18px',
-              cursor: 'pointer',
-              textTransform: 'uppercase',
-            }}
-          >
-            ← Back to Products
-          </button>
+      <div className="p-8">
+        <div className="pb-6 bdb mb-8">
+          <p className="text-[9px] tracking-[0.28em] fg-muted mb-2 uppercase">Products / New</p>
+          <h1 className="text-[20px] font-semibold fg-t1 m-0 tracking-[-0.02em]">Keypair Generated</h1>
         </div>
-      </>
+
+        <div className="px-4 py-3 border border-[rgba(61,214,140,0.2)] bg-[rgba(61,214,140,0.04)] mb-7 text-[11px] fg-green tracking-[0.04em]">
+          Product created — Ed25519 keypair generated. Private key encrypted at rest.
+        </div>
+
+        <div className="mb-7 max-w-[640px]">
+          <div className="text-[9px] tracking-[0.22em] fg-muted uppercase mb-2.5">
+            Public Key — embed in product binary
+          </div>
+          <div className="text-[9px] fg-muted mb-2.5">
+            Copy into{' '}
+            <code className="fg-t2">application.yml</code>
+            {' '}under{' '}
+            <code className="fg-t2">app.license.public-keys.{created.keyId}</code>
+          </div>
+          <div className="bg-s1 bd px-4 py-3.5 flex gap-3.5 items-start">
+            <code className="text-[10px] fg-t2 flex-1 break-all leading-7">{created.publicKeyB64}</code>
+            <button
+              onClick={() => copy(created.publicKeyB64)}
+              className={clsx(
+                'key-copy-btn font-[inherit] text-[9px] tracking-[0.2em] bg-none border-0 cursor-pointer uppercase shrink-0 transition-colors duration-[150ms]',
+                copied ? 'fg-green' : 'fg-t2',
+              )}
+            >
+              {copied ? 'Copied ✓' : 'Copy'}
+            </button>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-2 gap-4 max-w-[320px] py-4 bdt bdb mb-7">
+          <MetaItem label="Slug" value={created.slug} />
+          <MetaItem label="Key ID" value={created.keyId} />
+        </div>
+
+        <button
+          onClick={() => router.push('/products')}
+          className="font-[inherit] text-[10px] tracking-[0.2em] fg-dark bg-amber border-0 px-[18px] py-2.5 cursor-pointer uppercase"
+        >
+          ← Back to Products
+        </button>
+      </div>
     )
   }
 
   return (
-    <>
-      <style>{`
-        .form-input { transition: border-color 0.15s; }
-        .form-input:focus { border-bottom-color: var(--amber) !important; outline: none; }
-        .form-input::placeholder { color: var(--tm); }
-        .form-btn-primary:hover:not(:disabled) { background: var(--amber-d) !important; }
-        .form-btn-cancel:hover { color: var(--t1) !important; }
-      `}</style>
+    <div className="px-8 pt-8">
+      {/* Header */}
+      <div className="pb-6 bdb mb-8">
+        <p className="text-[9px] tracking-[0.28em] fg-muted mb-2 uppercase">Products / New</p>
+        <h1 className="text-[20px] font-semibold fg-t1 m-0 tracking-[-0.02em]">Add Product</h1>
+        <p className="text-[11px] fg-t2 mt-2">
+          Registers a product and generates an Ed25519 keypair. Embed the public key in your binary.
+        </p>
+      </div>
 
-      <div style={{ padding: '32px 32px 0' }}>
-        {/* Header */}
-        <div style={{ paddingBottom: 24, borderBottom: '1px solid var(--bs)', marginBottom: 32 }}>
-          <p style={{ fontSize: 9, letterSpacing: '0.28em', color: 'var(--tm)', marginBottom: 8, textTransform: 'uppercase' }}>
-            Products / New
-          </p>
-          <h1 style={{ fontSize: 20, fontWeight: 600, color: 'var(--t1)', margin: 0, letterSpacing: '-0.02em' }}>
-            Add Product
-          </h1>
-          <p style={{ fontSize: 11, color: 'var(--t2)', marginTop: 8 }}>
-            Registers a product and generates an Ed25519 keypair. Embed the public key in your binary.
-          </p>
+      <form onSubmit={handleSubmit} className="max-w-[440px]">
+        <Field label="Product Name" required>
+          <input type="text" required value={form.name} onChange={e => set('name', e.target.value)} placeholder="MyApp" className={inputCls} />
+        </Field>
+
+        <Field label="Slug" hint="used in license payload">
+          <input type="text" required pattern="[a-z0-9-]+" value={form.slug} onChange={e => set('slug', e.target.value)} placeholder="myapp" className={inputCls} />
+        </Field>
+
+        <div className="grid grid-cols-2 gap-5 mb-7">
+          <div>
+            <label className={lblCls}>Key ID</label>
+            <input type="text" value={form.keyId} onChange={e => set('keyId', e.target.value)} placeholder="v1" className={inputCls} />
+          </div>
+          <div>
+            <label className={lblCls}>Issuer Name <span className="opacity-60">(optional)</span></label>
+            <input type="text" value={form.issuerName} onChange={e => set('issuerName', e.target.value)} placeholder="keyforge" className={inputCls} />
+          </div>
         </div>
 
-        <form onSubmit={handleSubmit} style={{ maxWidth: 440 }}>
-          <Field label="Product Name" required>
-            <input
-              type="text"
-              required
-              value={form.name}
-              onChange={e => set('name', e.target.value)}
-              placeholder="MyApp"
-              className="form-input"
-              style={inputStyle}
-            />
-          </Field>
-
-          <Field label="Slug" hint="used in license payload">
-            <input
-              type="text"
-              required
-              pattern="[a-z0-9-]+"
-              value={form.slug}
-              onChange={e => set('slug', e.target.value)}
-              placeholder="myapp"
-              className="form-input"
-              style={inputStyle}
-            />
-          </Field>
-
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 20, marginBottom: 28 }}>
-            <div>
-              <label style={labelStyle}>Key ID</label>
-              <input
-                type="text"
-                value={form.keyId}
-                onChange={e => set('keyId', e.target.value)}
-                placeholder="v1"
-                className="form-input"
-                style={inputStyle}
-              />
-            </div>
-            <div>
-              <label style={labelStyle}>Issuer Name <span style={{ opacity: 0.6 }}>(optional)</span></label>
-              <input
-                type="text"
-                value={form.issuerName}
-                onChange={e => set('issuerName', e.target.value)}
-                placeholder="keyforge"
-                className="form-input"
-                style={inputStyle}
-              />
-            </div>
+        {error && (
+          <div className="mb-5 px-3 py-2 border border-[rgba(240,96,96,0.25)] text-[11px] fg-red bg-[rgba(240,96,96,0.05)]">
+            {error}
           </div>
+        )}
 
-          {error && (
-            <div style={{
-              marginBottom: 20,
-              padding: '8px 12px',
-              border: '1px solid rgba(240,96,96,0.25)',
-              fontSize: 11,
-              color: 'var(--red)',
-              background: 'rgba(240,96,96,0.05)',
-            }}>
-              {error}
-            </div>
-          )}
-
-          <div style={{ display: 'flex', gap: 16, alignItems: 'center', paddingTop: 8 }}>
-            <button
-              type="submit"
-              disabled={loading}
-              className="form-btn-primary"
-              style={primaryBtnStyle}
-            >
-              {loading ? 'Generating Keypair…' : 'Generate Keypair & Create →'}
-            </button>
-            <button
-              type="button"
-              onClick={() => router.back()}
-              className="form-btn-cancel"
-              style={cancelBtnStyle}
-            >
-              Cancel
-            </button>
-          </div>
-        </form>
-      </div>
-    </>
+        <div className="flex gap-4 items-center pt-2">
+          <button type="submit" disabled={loading} className={primBtnCls}>
+            {loading ? 'Generating Keypair…' : 'Generate Keypair & Create →'}
+          </button>
+          <button type="button" onClick={() => router.back()} className={cancelBtnCls}>Cancel</button>
+        </div>
+      </form>
+    </div>
   )
-}
-
-const inputStyle: React.CSSProperties = {
-  width: '100%',
-  background: 'transparent',
-  border: 'none',
-  borderBottom: '1px solid var(--b)',
-  padding: '6px 0 8px',
-  fontSize: 13,
-  color: 'var(--t1)',
-  fontFamily: 'inherit',
-}
-
-const labelStyle: React.CSSProperties = {
-  display: 'block',
-  fontSize: 9,
-  letterSpacing: '0.25em',
-  color: 'var(--tm)',
-  marginBottom: 10,
-  textTransform: 'uppercase',
-}
-
-const primaryBtnStyle: React.CSSProperties = {
-  fontFamily: 'inherit',
-  fontSize: 10,
-  letterSpacing: '0.22em',
-  fontWeight: 600,
-  color: '#07080d',
-  background: 'var(--amber)',
-  border: 'none',
-  padding: '11px 20px',
-  cursor: 'pointer',
-  textTransform: 'uppercase',
-  transition: 'background 0.12s',
-}
-
-const cancelBtnStyle: React.CSSProperties = {
-  fontFamily: 'inherit',
-  fontSize: 10,
-  letterSpacing: '0.18em',
-  color: 'var(--tm)',
-  background: 'none',
-  border: 'none',
-  cursor: 'pointer',
-  textTransform: 'uppercase',
-  transition: 'color 0.1s',
 }
 
 function Field({ label, hint, required, children }: {
   label: string; hint?: string; required?: boolean; children: React.ReactNode
 }) {
   return (
-    <div style={{ marginBottom: 28 }}>
-      <label style={{
-        display: 'flex',
-        alignItems: 'baseline',
-        gap: 8,
-        fontSize: 9,
-        letterSpacing: '0.25em',
-        color: 'var(--tm)',
-        marginBottom: 10,
-        textTransform: 'uppercase',
-      }}>
+    <div className="mb-7">
+      <label className="flex items-baseline gap-2 text-[9px] tracking-[0.25em] fg-muted mb-2.5 uppercase">
         {label}
-        {hint && <span style={{ letterSpacing: '0.1em', opacity: 0.6 }}>({hint})</span>}
-        {required && <span style={{ color: 'var(--amber)', fontSize: 10 }}>*</span>}
+        {hint && <span className="tracking-[0.1em] opacity-60">({hint})</span>}
+        {required && <span className="fg-amber text-[10px]">*</span>}
       </label>
       {children}
     </div>
@@ -353,10 +177,8 @@ function Field({ label, hint, required, children }: {
 function MetaItem({ label, value }: { label: string; value: string }) {
   return (
     <div>
-      <div style={{ fontSize: 9, letterSpacing: '0.2em', color: 'var(--tm)', textTransform: 'uppercase', marginBottom: 4 }}>
-        {label}
-      </div>
-      <code style={{ fontSize: 12, color: 'var(--t2)' }}>{value}</code>
+      <div className="text-[9px] tracking-[0.2em] fg-muted uppercase mb-1">{label}</div>
+      <code className="text-xs fg-t2">{value}</code>
     </div>
   )
 }

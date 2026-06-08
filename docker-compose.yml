@@ -15,27 +15,54 @@ services:
       timeout: 5s
       retries: 10
 
+  vault:
+    image: hashicorp/vault:latest
+    command: server
+    environment:
+      VAULT_ADDR: http://127.0.0.1:8200
+      VAULT_LOCAL_CONFIG: >-
+        {"storage":{"file":{"path":"/vault/file"}},"listener":[{"tcp":{"address":"0.0.0.0:8200","tls_disable":true}}],"disable_mlock":true}
+    cap_add:
+      - IPC_LOCK
+    volumes:
+      - vaultdata:/vault/file
+    networks:
+      - secrets
+    healthcheck:
+      test: ["CMD", "vault", "status"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+      start_period: 5s
+
   portal-ui:
     build: .
     depends_on:
       postgres:
         condition: service_healthy
+      vault:
+        condition: service_healthy
     environment:
       DATABASE_URL: postgresql://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-postgres}@postgres:5432/${POSTGRES_DB:-license_server}
-      KEK_BASE64: ${KEK_BASE64}
+      VAULT_ADDR: http://vault:8200
+      VAULT_ROLE_ID: ${VAULT_ROLE_ID:-}
+      VAULT_SECRET_ID: ${VAULT_SECRET_ID:-}
+      KEK_BASE64: ${KEK_BASE64:-}
       JWT_SECRET: ${JWT_SECRET}
       ADMIN_EMAIL: ${ADMIN_EMAIL}
       ADMIN_PASSWORD_HASH: ${ADMIN_PASSWORD_HASH}
       NEXT_PUBLIC_BASE_URL: ${NEXT_PUBLIC_BASE_URL}
       PROXY_UPSTREAM_URL: ${PROXY_UPSTREAM_URL:-}
       PROXY_BYPASS_PREFIXES: ${PROXY_BYPASS_PREFIXES:-}
+      TRUSTED_PROXY_HEADER: ${TRUSTED_PROXY_HEADER:-}
     ports:
       - "3001:3001"
     networks:
       - db
       - web
+      - secrets
     healthcheck:
-      test: ["CMD-SHELL", "curl -f http://localhost:3001/login || exit 1"]
+      test: ["CMD-SHELL", "wget -qO- http://localhost:3001/login > /dev/null || exit 1"]
       interval: 10s
       timeout: 5s
       retries: 12
@@ -44,7 +71,10 @@ services:
 networks:
   db:
     internal: true
+  secrets:
+    internal: true
   web:
 
 volumes:
   pgdata:
+  vaultdata:

@@ -1,6 +1,7 @@
 'use client'
 
 import { useState } from 'react'
+import clsx from 'clsx'
 
 export function CopyButton({ text }: { text: string }) {
   const [copied, setCopied] = useState(false)
@@ -25,19 +26,10 @@ export function CopyButton({ text }: { text: string }) {
   return (
     <button
       onClick={handleCopy}
-      style={{
-        fontFamily: 'inherit',
-        fontSize: 9,
-        letterSpacing: '0.2em',
-        color: copied ? 'var(--green)' : 'var(--amber)',
-        background: 'none',
-        border: 'none',
-        cursor: 'pointer',
-        padding: 0,
-        textTransform: 'uppercase',
-        flexShrink: 0,
-        transition: 'color 0.15s',
-      }}
+      className={clsx(
+        'key-copy-btn font-[inherit] text-[9px] tracking-[0.2em] bg-none border-0 cursor-pointer p-0 uppercase shrink-0 transition-colors duration-[150ms]',
+        copied ? 'fg-green' : 'fg-amber',
+      )}
     >
       {copied ? 'Copied ✓' : 'Copy'}
     </button>

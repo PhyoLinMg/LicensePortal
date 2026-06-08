@@ -2,13 +2,16 @@ import { db } from '@/lib/db'
 import { isAuthenticated } from '@/lib/auth'
 import { redirect } from 'next/navigation'
 import Link from 'next/link'
+import clsx from 'clsx'
 
-function staleness(lastSeenAt: Date) {
+type StalenessInfo = { label: string; textCls: string; dotCls: string; pulse: boolean }
+
+function staleness(lastSeenAt: Date): StalenessInfo {
   const age = Date.now() - new Date(lastSeenAt).getTime()
-  if (age < 60 * 60 * 1000)       return { label: 'LIVE',  color: 'var(--green)',  dot: 'pulse' }
-  if (age < 24 * 60 * 60 * 1000)  return { label: 'TODAY', color: 'var(--blue)',   dot: 'solid' }
-  if (age < 7 * 24 * 60 * 60 * 1000) return { label: 'STALE', color: 'var(--orange)', dot: 'solid' }
-  return                                    { label: 'OLD',   color: 'var(--red)',    dot: 'solid' }
+  if (age < 60 * 60 * 1000)          return { label: 'LIVE',  textCls: 'fg-green',  dotCls: 'bg-green',  pulse: true  }
+  if (age < 24 * 60 * 60 * 1000)     return { label: 'TODAY', textCls: 'fg-blue',   dotCls: 'bg-[var(--blue)]',  pulse: false }
+  if (age < 7 * 24 * 60 * 60 * 1000) return { label: 'STALE', textCls: 'fg-orange', dotCls: 'bg-[var(--orange)]', pulse: false }
+  return                                     { label: 'OLD',   textCls: 'fg-red',    dotCls: 'bg-red',    pulse: false }
 }
 
 function fmtTs(d: Date) {
@@ -32,50 +35,33 @@ export default async function HeartbeatsPage() {
   })
 
   const totalInstances = products.reduce(
-    (sum, p) => sum + p.licenses.reduce((s, l) => s + l.instances.length, 0),
-    0,
+    (sum, p) => sum + p.licenses.reduce((s, l) => s + l.instances.length, 0), 0,
   )
-
   const liveCount = products.reduce((sum, p) =>
     sum + p.licenses.reduce((s, l) =>
       s + l.instances.filter(i => Date.now() - new Date(i.lastSeenAt).getTime() < 60 * 60 * 1000).length, 0), 0)
 
   return (
     <>
-      <style>{`
-        .hb-row:hover { background: var(--s2) !important; }
-        .hb-link:hover { color: var(--amber) !important; }
-        @keyframes pulse-dot {
-          0%,100% { opacity: 1; }
-          50%     { opacity: 0.3; }
-        }
-      `}</style>
-
-      <div style={{ padding: '32px 32px 0' }}>
+      <div className="px-8 pt-8">
         {/* Header */}
-        <div style={{ paddingBottom: 24, borderBottom: '1px solid var(--bs)' }}>
-          <p style={{ fontSize: 9, letterSpacing: '0.28em', color: 'var(--tm)', marginBottom: 8, textTransform: 'uppercase' }}>
-            License Portal
-          </p>
-          <h1 style={{ fontSize: 20, fontWeight: 600, color: 'var(--t1)', margin: 0, letterSpacing: '-0.02em' }}>
-            Heartbeats
-          </h1>
+        <div className="pb-6 bdb">
+          <p className="text-[9px] tracking-[0.28em] fg-muted mb-2 uppercase">License Portal</p>
+          <h1 className="text-[20px] font-semibold fg-t1 m-0 tracking-[-0.02em]">Heartbeats</h1>
         </div>
 
         {/* Stats */}
-        <div style={{ display: 'flex', gap: 32, padding: '18px 0', borderBottom: '1px solid var(--bs)' }}>
+        <div className="flex gap-8 py-[18px] bdb">
           <Stat label="Total Instances" value={totalInstances} />
-          <Stat label="Live (last 1h)" value={liveCount} color="var(--green)" />
+          <Stat label="Live (last 1h)" value={liveCount} colorCls="fg-green" />
           <Stat label="Products" value={products.length} />
         </div>
       </div>
 
       {/* Tables per product */}
-      <div style={{ padding: '24px 32px', display: 'flex', flexDirection: 'column', gap: 24 }}>
+      <div className="px-8 py-6 flex flex-col gap-6">
         {totalInstances === 0 ? (
-          <div style={{ fontSize: 11, color: 'var(--tm)', letterSpacing: '0.15em', padding: '24px 0' }}>
-            No heartbeats received yet.
-          </div>
+          <div className="text-[11px] fg-muted tracking-[0.15em] py-6">No heartbeats received yet.</div>
         ) : (
           products.map((product) => {
             const instances = product.licenses
@@ -84,106 +70,40 @@ export default async function HeartbeatsPage() {
             if (instances.length === 0) return null
 
             return (
-              <div key={product.id} style={{ border: '1px solid var(--bs)' }}>
+              <div key={product.id} className="bd">
                 {/* Product header */}
-                <div style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'space-between',
-                  padding: '10px 16px',
-                  borderBottom: '1px solid var(--bs)',
-                  background: 'var(--s1)',
-                }}>
-                  <div style={{ display: 'flex', alignItems: 'baseline', gap: 10 }}>
-                    <span style={{ fontSize: 12, fontWeight: 500, color: 'var(--t1)' }}>{product.name}</span>
-                    <span style={{ fontSize: 10, color: 'var(--tm)' }}>{product.slug}</span>
+                <div className="flex items-center justify-between px-4 py-2.5 bdb bg-s1">
+                  <div className="flex items-baseline gap-2.5">
+                    <span className="text-xs font-medium fg-t1">{product.name}</span>
+                    <span className="text-[10px] fg-muted">{product.slug}</span>
                   </div>
-                  <span style={{ fontSize: 9, letterSpacing: '0.15em', color: 'var(--tm)', textTransform: 'uppercase' }}>
+                  <span className="text-[9px] tracking-[0.15em] fg-muted uppercase">
                     {instances.length} instance{instances.length !== 1 ? 's' : ''}
                   </span>
                 </div>
 
                 {/* Column headers */}
-                <div style={{
-                  display: 'grid',
-                  gridTemplateColumns: '28px 260px 130px 80px 70px 1fr 1fr',
-                  padding: '6px 16px',
-                  fontSize: 9,
-                  letterSpacing: '0.18em',
-                  color: 'var(--tm)',
-                  borderBottom: '1px solid var(--bs)',
-                  textTransform: 'uppercase',
-                }}>
-                  <span />
-                  <span>Instance UUID</span>
-                  <span>Customer</span>
-                  <span>Version</span>
-                  <span>Seq</span>
-                  <span>Last Seen (UTC)</span>
-                  <span>First Seen (UTC)</span>
+                <div className="grid grid-cols-[28px_260px_130px_80px_70px_1fr_1fr] px-4 py-1.5 text-[9px] tracking-[0.18em] fg-muted bdb uppercase">
+                  <span /><span>Instance UUID</span><span>Customer</span>
+                  <span>Version</span><span>Seq</span><span>Last Seen (UTC)</span><span>First Seen (UTC)</span>
                 </div>
 
                 {/* Rows */}
                 {instances.map((inst) => {
                   const s = staleness(inst.lastSeenAt)
                   return (
-                    <div
-                      key={inst.id}
-                      className="hb-row"
-                      style={{
-                        display: 'grid',
-                        gridTemplateColumns: '28px 260px 130px 80px 70px 1fr 1fr',
-                        padding: '9px 16px',
-                        borderBottom: '1px solid var(--bs)',
-                        alignItems: 'center',
-                        transition: 'background 0.1s',
-                      }}
-                    >
-                      {/* Status dot */}
-                      <div style={{ display: 'flex', alignItems: 'center' }}>
-                        <span style={{
-                          width: 6,
-                          height: 6,
-                          borderRadius: '50%',
-                          background: s.color,
-                          display: 'inline-block',
-                          animation: s.dot === 'pulse' ? 'pulse-dot 1.5s ease-in-out infinite' : 'none',
-                        }} />
+                    <div key={inst.id} className="hb-row grid grid-cols-[28px_260px_130px_80px_70px_1fr_1fr] px-4 py-[9px] bdb items-center transition-[background] duration-100">
+                      <div className="flex items-center">
+                        <span className={clsx('w-1.5 h-1.5 rounded-full inline-block', s.dotCls, s.pulse && '[animation:pulse-dot_1.5s_ease-in-out_infinite]')} />
                       </div>
-
-                      {/* UUID */}
-                      <span style={{ fontSize: 10, color: 'var(--t2)', letterSpacing: '0.02em' }}>
-                        {inst.instanceUuid}
-                      </span>
-
-                      {/* Customer */}
-                      <Link
-                        href={`/licenses/${inst.license.id}`}
-                        className="hb-link"
-                        style={{ fontSize: 11, color: 'var(--t2)', textDecoration: 'none', transition: 'color 0.1s' }}
-                      >
+                      <span className="text-[10px] fg-t2 tracking-[0.02em]">{inst.instanceUuid}</span>
+                      <Link href={`/licenses/${inst.license.id}`} className={`hb-link text-[11px] ${s.textCls} no-underline transition-colors duration-100`}>
                         {inst.license.customer.name}
                       </Link>
-
-                      {/* Version */}
-                      <span style={{ fontSize: 10, color: 'var(--tm)' }}>
-                        {inst.lastVersion ? `v${inst.lastVersion}` : '—'}
-                      </span>
-
-                      {/* Seq */}
-                      <span style={{ fontSize: 10, color: 'var(--tm)' }}>
-                        {inst.latestSequence.toString()}
-                      </span>
-
-                      {/* Last seen */}
-                      <span style={{ fontSize: 10, color: s.color }}>
-                        {fmtTs(inst.lastSeenAt)}
-                      </span>
-
-                      {/* First seen */}
-                      <span style={{ fontSize: 10, color: 'var(--tm)' }}>
-                        {fmtTs(inst.firstSeenAt)}
-                      </span>
+                      <span className="text-[10px] fg-muted">{inst.lastVersion ? `v${inst.lastVersion}` : '—'}</span>
+                      <span className="text-[10px] fg-muted">{inst.latestSequence.toString()}</span>
+                      <span className={`text-[10px] ${s.textCls}`}>{fmtTs(inst.lastSeenAt)}</span>
+                      <span className="text-[10px] fg-muted">{fmtTs(inst.firstSeenAt)}</span>
                     </div>
                   )
                 })}
@@ -196,15 +116,11 @@ export default async function HeartbeatsPage() {
   )
 }
 
-function Stat({ label, value, color = 'var(--t2)' }: { label: string; value: number; color?: string }) {
+function Stat({ label, value, colorCls = 'fg-t2' }: { label: string; value: number; colorCls?: string }) {
   return (
     <div>
-      <div style={{ fontSize: 9, letterSpacing: '0.2em', color: 'var(--tm)', textTransform: 'uppercase', marginBottom: 3 }}>
-        {label}
-      </div>
-      <div style={{ fontSize: 22, fontWeight: 600, color, letterSpacing: '-0.03em' }}>
-        {value}
-      </div>
+      <div className="text-[9px] tracking-[0.2em] fg-muted uppercase mb-[3px]">{label}</div>
+      <div className={`text-[22px] font-semibold ${colorCls} tracking-[-0.03em]`}>{value}</div>
     </div>
   )
 }

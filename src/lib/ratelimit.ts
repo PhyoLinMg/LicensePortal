@@ -22,23 +22,30 @@ setInterval(() => {
   }
 }, 5 * 60 * 1000).unref()
 
+export interface RateResult {
+  ok: boolean
+  limit: number
+  remaining: number
+  resetAt: number
+}
+
 /**
- * Returns true if the request should be allowed, false if rate-limited.
+ * Returns rate-limit result with ok flag and counters for X-RateLimit-* headers.
  *
  * @param key     Unique bucket key (e.g. "login:<ip>", "hb:<licenseId>")
  * @param limit   Max requests per window
  * @param windowMs Window size in milliseconds
  */
-export function allow(key: string, limit: number, windowMs: number): boolean {
+export function allow(key: string, limit: number, windowMs: number): RateResult {
   const now = Date.now()
   let w = windows.get(key)
   if (!w || now > w.resetAt) {
     w = { count: 1, resetAt: now + windowMs }
     windows.set(key, w)
-    return true
+    return { ok: true, limit, remaining: limit - 1, resetAt: w.resetAt }
   }
   w.count++
-  return w.count <= limit
+  return { ok: w.count <= limit, limit, remaining: Math.max(0, limit - w.count), resetAt: w.resetAt }
 }
 
 // ── Nonce deduplication ───────────────────────────────────────────────────────
