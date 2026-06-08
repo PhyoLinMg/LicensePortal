@@ -2,13 +2,12 @@ import { NextRequest, NextResponse } from 'next/server'
 import { db } from '@/lib/db'
 import { computeState } from '@/lib/enforce'
 
-// PROXY_UPSTREAM_URL is the generic name; fall back to legacy HANDOFF_INTERNAL_URL for existing deployments
 function upstreamUrl(): string | undefined {
-  return process.env.PROXY_UPSTREAM_URL ?? process.env.HANDOFF_INTERNAL_URL
+  return process.env.PROXY_UPSTREAM_URL
 }
 
-// Comma-separated path prefixes that bypass the license gate (e.g. "api/jobs/,api/health/")
-const GATE_BYPASS_PREFIXES = (process.env.PROXY_BYPASS_PREFIXES ?? 'api/jobs/')
+// Comma-separated path prefixes that bypass the license gate (e.g. "api/health/,api/webhooks/")
+const GATE_BYPASS_PREFIXES = (process.env.PROXY_BYPASS_PREFIXES ?? '')
   .split(',')
   .map((s) => s.trim())
   .filter(Boolean)

@@ -1,4 +1,4 @@
-# Handoff License Server — Documentation
+# Keyforge — Documentation
 
 ## Table of Contents
 
@@ -7,12 +7,13 @@
 3. [Issuing a License](#issuing-a-license)
 4. [API Reference](#api-reference)
 5. [Self-Hosting Guide](#self-hosting-guide)
+6. [Integration Guide](#integration-guide)
 
 ---
 
 ## How It Works
 
-The license server is a vendor-hosted Next.js app (Prisma + PostgreSQL) that issues, tracks, and revokes licenses for self-hosted products (e.g., Handoff). Customers never access it directly — only the vendor operates it.
+The license server is a vendor-hosted Next.js app (Prisma + PostgreSQL) that issues, tracks, and revokes licenses for self-hosted products. Customers never access it directly — only the vendor operates it.
 
 ### Architecture
 
@@ -22,7 +23,7 @@ Vendor admin
      ▼
 License Portal (this repo)          Customer's server
 ┌──────────────────────────┐       ┌─────────────────────────────┐
-│  Admin UI                │       │  Handoff / product binary   │
+│  Admin UI                │       │  product binary             │
 │  /admin/products         │       │                             │
 │  /admin/customers        │  lic  │  boot: verify sig locally   │
 │  /admin/licenses   ──────┼──────►│  hourly: POST /api/v1/validate│
@@ -74,7 +75,7 @@ If a customer replaces their server, a vendor admin must call `POST /api/admin/l
 
 ### Proxy Gate (optional)
 
-When `PROXY_UPSTREAM_URL` is set, `/api/proxy/[...path]` reverse-proxies to the upstream. Requests are blocked with `402` if no active valid license exists (10-second cache). Configure bypass prefixes with `PROXY_BYPASS_PREFIXES` (default: `api/jobs/`).
+When `PROXY_UPSTREAM_URL` is set, `/api/proxy/[...path]` reverse-proxies to the upstream. Requests are blocked with `402` if no active valid license exists (10-second cache). Configure bypass prefixes with `PROXY_BYPASS_PREFIXES` (comma-separated path prefixes that skip the gate; unset = no bypasses).
 
 ---
 
@@ -127,14 +128,14 @@ curl -s -X POST https://license.yourcompany.com/api/admin/products \
   -H "Cookie: lsrv_session=<token>" \
   -H "Content-Type: application/json" \
   -d '{
-    "name": "Handoff",
-    "slug": "handoff",
+    "name": "MyApp",
+    "slug": "myapp",
     "keyId": "v1",
     "issuerName": "yourcompany-license-server"
   }'
 ```
 
-Response includes `publicKeyB64` — copy this into your product binary as `app.license.public-keys.v1` (or equivalent). The private key never leaves the server.
+Response includes `publicKeyB64` — copy this into your product binary at build time. The private key never leaves the server.
 
 ### Step 2 — Create a Customer
 
@@ -172,13 +173,13 @@ curl -s -X POST https://license.yourcompany.com/api/admin/licenses \
   }'
 ```
 
-Response includes `licenseText` — the full token string to send to the customer. Customer drops it at `/etc/handoff/handoff.lic` (or uploads via admin UI).
+Response includes `licenseText` — the full token string to send to the customer. Customer drops it at a path your product reads on boot (or uploads via admin UI).
 
 ### Step 4 — Deliver to Customer
 
 Send the `licenseText` value to the customer. They either:
-- Place the file at `/etc/handoff/handoff.lic`, or
-- Upload it via Handoff admin → Settings → License.
+- Place the file at a path your product binary reads on boot (e.g. `/etc/myapp/myapp.lic`), or
+- Upload it via your product's admin UI.
 
 ### Revoking a License
 
@@ -438,9 +439,9 @@ ADMIN_PASSWORD_HASH=<bcrypt hash from step 1>
 
 NEXT_PUBLIC_BASE_URL=https://license.yourcompany.com
 
-# Optional: proxy to a Handoff backend
-# PROXY_UPSTREAM_URL=http://handoff-backend:8080
-# PROXY_BYPASS_PREFIXES=api/jobs/
+# Optional: proxy to your product backend
+# PROXY_UPSTREAM_URL=http://my-product-backend:8080
+# PROXY_BYPASS_PREFIXES=api/health/,api/webhooks/
 ```
 
 > **Security:** `KEK_BASE64` encrypts all product private keys at rest. Losing it means you cannot sign new licenses. Back it up securely.
@@ -469,7 +470,7 @@ Navigate to `https://license.yourcompany.com/login`. Use the `ADMIN_EMAIL` and p
 
 ### 6. Register your product
 
-Go to **Products → New**. Copy the `publicKeyB64` from the response into your product binary (Handoff: `app.license.public-keys.v1` in `application.properties`).
+Go to **Products → New**. Copy the `publicKeyB64` from the response into your product binary at build time.
 
 ### Updating
 
@@ -495,3 +496,334 @@ The entrypoint runs `prisma migrate deploy` on startup, applying any pending mig
 ### Backups
 
 Back up the PostgreSQL volume (`pgdata`). The only secrets that cannot be regenerated are `KEK_BASE64` (needed to decrypt private keys) and `ADMIN_PASSWORD_HASH`. Store both in a secrets manager.
+
+---
+
+## Integration Guide
+
+This section covers everything a developer needs to integrate a product binary with this license server — keypair management, token verification, the heartbeat signing protocol, and the client-side state machine.
+
+---
+
+### Overview
+
+```
+Product binary (customer's server)
+┌──────────────────────────────────────────────┐
+│  Boot                                        │
+│    1. Read license file → verifyLicenseText  │
+│       (offline, no network)                  │
+│    2. POST /api/v1/validate → get state      │
+│                                              │
+│  Hourly                                      │
+│    3. POST /api/v1/heartbeat → signed ping   │
+│       → response includes enforcement block  │
+│                                              │
+│  On state change                             │
+│    4. Update local LicenseState              │
+│       VALID → allow mutations                │
+│       DEGRADED / EXPIRED → read-only         │
+│       REVOKED / INVALID → read-only          │
+└──────────────────────────────────────────────┘
+```
+
+---
+
+### Step 1 — Embed the Product Public Key
+
+When you create a product via `POST /api/admin/products`, the response includes `publicKeyB64` — a base64-encoded SubjectPublicKeyInfo (SPKI) DER representation of the Ed25519 public key.
+
+Embed this value in your product binary at build time. It is used to:
+- Verify the license token signature offline at boot.
+- Verify heartbeat response signatures from the server.
+
+```
+# Example: any config file
+LICENSE_PUBLIC_KEY_V1=<publicKeyB64 from product creation>
+```
+
+The private key never leaves the license server.
+
+---
+
+### Step 2 — Verify the License Token at Boot (Offline)
+
+**Token format:**
+
+```
+<base64url(canonicalJson(payload))>.<base64url(Ed25519Signature)>
+```
+
+Both segments use standard base64url encoding with no `=` padding.
+
+**Verification algorithm:**
+
+```
+1. Split on the LAST '.' character
+2. payloadBytes = base64url_decode(left segment)
+3. sig           = base64url_decode(right segment)
+4. pubKey        = spki_der_decode(base64_decode(publicKeyB64))
+5. valid         = ed25519_verify(pubKey, payloadBytes, sig)
+6. if not valid → INVALID state, block mutations
+7. payload       = json_parse(payloadBytes)
+8. if payload.expires_at < now → EXPIRED
+9. if payload.not_before > now → INVALID (not yet valid)
+10. → VALID (until server poll updates state)
+```
+
+**Payload fields:**
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `schema_version` | string | `"1"` |
+| `issuer` | string | Issuer name from product |
+| `key_id` | string | Key version, e.g. `"v1"` |
+| `license_id` | string (UUID) | License identifier |
+| `product_id` | string | Product slug |
+| `customer_id` | string (UUID) | Customer identifier |
+| `customer_name` | string | Customer display name |
+| `tier` | string | e.g. `"pro"`, `"starter"` |
+| `features` | string[] | Enabled feature flags |
+| `limits` | object | Map of limit name → number |
+| `issued_at` | string (RFC3339) | Issue timestamp |
+| `not_before` | string (RFC3339) | Valid from |
+| `expires_at` | string (RFC3339) | Expiry timestamp |
+| `heartbeat_url` | string | URL to POST heartbeats to |
+| `grace_period_days` | number | Days after expiry before hard block |
+
+---
+
+### Step 3 — Poll `/api/v1/validate` Hourly
+
+```http
+POST /api/v1/validate
+Content-Type: application/json
+
+{ "license_text": "<full token string>" }
+```
+
+Response:
+
+```json
+{
+  "state": "VALID",
+  "license_id": "...",
+  "tier": "pro",
+  "features": ["intake"],
+  "limits": { "max_clients": 50 },
+  "expires_at": "2027-01-01T00:00:00Z",
+  "grace_period_days": 21,
+  "heartbeat_url": "https://license.yourcompany.com/api/v1/heartbeat",
+  "new_license": null
+}
+```
+
+`state` is one of `VALID`, `EXPIRED`, `REVOKED`, `INVALID`. Apply it to your local state machine (see Step 6).
+
+---
+
+### Step 4 — Generate an Instance Keypair
+
+Each running product instance needs its own Ed25519 keypair. Generate it once at first startup and persist it (e.g., in a local DB or file). This keypair authenticates all heartbeats for the lifetime of the instance.
+
+```typescript
+// Node.js
+import { generateKeyPairSync } from 'crypto'
+
+const { privateKey, publicKey } = generateKeyPairSync('ed25519')
+const privateKeyDer = privateKey.export({ type: 'pkcs8', format: 'der' }) as Buffer
+const publicKeyDer  = publicKey.export({ type: 'spki',  format: 'der' }) as Buffer
+
+// Persist both. publicKeyB64 is sent on the first heartbeat.
+const instancePrivateKey = privateKeyDer        // keep secret, never send
+const instancePublicKeyB64 = publicKeyDer.toString('base64')  // sent once on first heartbeat
+```
+
+---
+
+### Step 5 — Sign and Send Heartbeats
+
+**Heartbeat request body:**
+
+```json
+{
+  "license_id":          "<UUID>",
+  "instance_id":         "<UUID — stable per instance>",
+  "version":             "1.2.3",
+  "usage":               { "active_clients": 3 },
+  "now":                 "2026-06-04T10:00:00Z",
+  "nonce":               "<random string, 8–128 chars>",
+  "sequence":            42,
+  "signature":           "<base64url Ed25519 sig>",
+  "instance_public_key": "<base64 SPKI DER — first heartbeat only>"
+}
+```
+
+#### Canonical JSON signing algorithm
+
+The signature covers all fields **except** `signature` and `instance_public_key`. The exact algorithm:
+
+1. Build an object containing only the fields to sign:
+   ```
+   { license_id, instance_id, version, usage, now, nonce, sequence }
+   ```
+   Omit `signature`. Omit `instance_public_key` even on the first heartbeat.
+
+2. Apply canonical JSON:
+   - Recursively sort all object keys alphabetically (applies to nested objects too).
+   - Arrays: preserve element order, do not sort.
+   - No whitespace (no spaces or newlines).
+   - Encode as UTF-8 bytes.
+
+3. Sign the canonical JSON bytes with the instance's Ed25519 private key.
+
+4. Base64url-encode the signature (no `=` padding).
+
+**Example (TypeScript/Node.js):**
+
+```typescript
+import { sign } from 'crypto'
+
+function canonicalJson(obj: unknown): Buffer {
+  return Buffer.from(JSON.stringify(sortDeep(obj)), 'utf-8')
+}
+
+function sortDeep(obj: unknown): unknown {
+  if (Array.isArray(obj)) return obj.map(sortDeep)
+  if (obj !== null && typeof obj === 'object') {
+    return Object.fromEntries(
+      Object.keys(obj as Record<string, unknown>)
+        .sort()
+        .map(k => [k, sortDeep((obj as Record<string, unknown>)[k])])
+    )
+  }
+  return obj
+}
+
+function signHeartbeat(fields: object, privateKeyDer: Buffer): string {
+  const payload = canonicalJson(fields)
+  const sig = sign(null, payload, {
+    key: privateKeyDer,
+    format: 'der',
+    type: 'pkcs8',
+  })
+  return sig.toString('base64url').replace(/=+$/, '')
+}
+
+// Build the request
+const sequence = getNextSequence()  // must be strictly increasing
+const nonce    = randomBytes(16).toString('hex')
+
+const toSign = { license_id, instance_id, version, usage, now, nonce, sequence }
+const signature = signHeartbeat(toSign, instancePrivateKeyDer)
+
+const body = {
+  ...toSign,
+  signature,
+  // only include on first heartbeat:
+  ...(isFirstHeartbeat ? { instance_public_key: instancePublicKeyB64 } : {}),
+}
+```
+
+#### Sequence number
+
+- Start at `0` on the very first heartbeat.
+- Increment by at least `1` on every subsequent heartbeat.
+- Persist the last-sent sequence — do not reset it on restart. The server rejects any sequence ≤ the last accepted value (`replay_rejected`).
+
+#### Nonce
+
+- Generate a random string (16–32 hex chars is fine) per heartbeat.
+- The server deduplicates nonces per `license_id` for 10 minutes. Use a fresh nonce every heartbeat.
+
+#### Verifying the response signature
+
+The server signs its response body with the product's Ed25519 private key. Verify it using the embedded `publicKeyB64`:
+
+```typescript
+import { verify } from 'crypto'
+import { createPublicKey } from 'crypto'
+
+function verifyResponse(body: object, signatureB64url: string, productPublicKeyB64: string): boolean {
+  const pubDer = Buffer.from(productPublicKeyB64, 'base64')
+  const pubKey = createPublicKey({ key: pubDer, format: 'der', type: 'spki' })
+  const payload = canonicalJson(body)   // same canonicalJson as above
+  const sig = Buffer.from(signatureB64url, 'base64url')
+  return verify(null, payload, pubKey, sig)
+}
+
+// Usage:
+const { signature: responseSig, ...responseBody } = await res.json()
+if (!verifyResponse(responseBody, responseSig, productPublicKeyB64)) {
+  // Response is not from the real license server — treat as unreachable
+}
+const { enforcement } = responseBody
+```
+
+---
+
+### Step 6 — Client-Side State Machine
+
+Maintain a `LicenseState` with the following values and transitions:
+
+```
+States: VALID | DEGRADED | EXPIRED | REVOKED | INVALID | UNLICENSED
+
+Boot:
+  No license file/DB   → UNLICENSED
+  Bad sig / bad format → INVALID
+  not_before > now     → INVALID
+  expires_at < now     → EXPIRED (may still enter grace)
+  Otherwise            → VALID
+
+On successful poll (/validate or /heartbeat enforcement block):
+  server returns VALID    → VALID, reset stale timer
+  server returns EXPIRED  → EXPIRED
+  server returns REVOKED  → REVOKED
+  server returns INVALID  → INVALID
+
+On failed poll (network error, timeout, 5xx):
+  < 24 hours since last success  → stay in current state (no change)
+  ≥ 24 hours since last success  → DEGRADED
+  ≥ grace_period_days days since last success → EXPIRED
+
+Enforcement:
+  VALID     → full access (all mutations allowed)
+  DEGRADED  → read-only (mutations blocked, warn user)
+  EXPIRED   → read-only
+  REVOKED   → read-only
+  INVALID   → read-only
+  UNLICENSED→ read-only (or block entirely — your choice)
+```
+
+Persist `lastSuccessfulPollAt` and `gracePeriodDays` to survive restarts. On restart with no network, calculate staleness from the persisted timestamp.
+
+---
+
+### Step 7 — Rebinding After Server Replacement
+
+Each license is bound to one `instance_id` on its first heartbeat. If the customer replaces their server (new `instance_id`), they must ask the vendor to rebind:
+
+```bash
+# Vendor calls:
+curl -X POST https://license.yourcompany.com/api/admin/licenses/<id>/rebind \
+  -H "Cookie: lsrv_session=<token>"
+```
+
+After rebind, the next heartbeat from any instance_id will re-bind the license.
+
+---
+
+### Minimal Client Checklist
+
+- [ ] Ed25519 keypair generated and persisted at first startup
+- [ ] License token verified offline at every boot
+- [ ] Sequence number persisted (survives restarts)
+- [ ] Canonical JSON implemented exactly (recursive key sort, no array sort, no whitespace, UTF-8)
+- [ ] `signature` and `instance_public_key` excluded from signed payload
+- [ ] `instance_public_key` sent on first heartbeat only
+- [ ] Nonce is fresh each heartbeat (16+ random bytes recommended)
+- [ ] Heartbeat response signature verified against embedded product public key
+- [ ] State machine with DEGRADED transition at 24h stale
+- [ ] EXPIRED transition at `grace_period_days` stale
+- [ ] Mutations blocked on any state ≠ VALID

@@ -1,4 +1,5 @@
 import { NextRequest } from 'next/server'
+import { z } from 'zod'
 import { db } from '@/lib/db'
 import { canonicalJson, verifyInstanceSignature, signHeartbeatResponse } from '@/lib/crypto'
 import { toRfc3339 } from '@/lib/license'
@@ -15,6 +16,19 @@ import type { Prisma } from '@prisma/client'
 //   signature: base64url(Ed25519 over canonical_json of all other fields),
 //   instance_public_key?: base64 SPKI DER (first heartbeat only)
 // }
+
+const HeartbeatBodySchema = z.object({
+  license_id: z.string().uuid(),
+  instance_id: z.string().uuid(),
+  version: z.string().optional(),
+  usage: z.record(z.string(), z.unknown()).optional(),
+  now: z.string().optional(),
+  nonce: z.string().min(1).max(256),
+  sequence: z.number().int().min(0),
+  signature: z.string().min(1),
+  instance_public_key: z.string().optional(),
+})
+
 export async function POST(req: NextRequest) {
   let body: Record<string, unknown>
   try {
@@ -23,41 +37,42 @@ export async function POST(req: NextRequest) {
     return hbError(400, 'invalid_json')
   }
 
-  const {
-    license_id,
-    instance_id,
-    version,
-    usage,
-    now: clientNow,
-    nonce,
-    sequence,
-    signature,
-    instance_public_key,
-  } = body
-
+  // Presence check first — preserves specific missing_fields error code for required fields
+  const { license_id, instance_id, nonce, sequence, signature } = body
   if (!license_id || !instance_id || !nonce || sequence === undefined || !signature) {
     return hbError(400, 'missing_fields')
   }
 
-  // Validate UUID format for license_id and instance_id before hitting the DB
-  const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
-  if (!UUID_RE.test(license_id as string)) return hbError(400, 'invalid_license_id')
-  if (!UUID_RE.test(instance_id as string)) return hbError(400, 'invalid_instance_id')
-
-  // Validate sequence before BigInt() — catches null / non-integer / non-finite values
-  if (typeof sequence !== 'number' || !Number.isFinite(sequence) || sequence < 0 || !Number.isInteger(sequence)) {
-    return hbError(400, 'invalid_sequence')
+  // Type/format validation — eliminates all `as T` casts on user-supplied fields
+  const parsed = HeartbeatBodySchema.safeParse(body)
+  if (!parsed.success) {
+    const paths = new Set(parsed.error.issues.map(i => i.path[0] as string))
+    if (paths.has('license_id')) return hbError(400, 'invalid_license_id')
+    if (paths.has('instance_id')) return hbError(400, 'invalid_instance_id')
+    if (paths.has('sequence')) return hbError(400, 'invalid_sequence')
+    return hbError(400, 'invalid_request')
   }
+
+  const {
+    license_id: licenseId,
+    instance_id: instanceId,
+    version,
+    usage,
+    nonce: validatedNonce,
+    sequence: validatedSequence,
+    signature: validatedSignature,
+    instance_public_key,
+  } = parsed.data
 
   // Rate-limit per license_id (not IP) — IP keying blocks all customers behind NAT.
   // 5 requests/min is generous for legitimate hourly polling + retries.
-  if (!allow(`heartbeat:${license_id as string}`, 5, 60_000)) {
+  if (!allow(`heartbeat:${licenseId}`, 5, 60_000)) {
     return hbError(429, 'rate_limited')
   }
 
   // Load license
   const license = await db.license.findUnique({
-    where: { id: license_id as string },
+    where: { id: licenseId },
     include: { product: true },
   })
   if (!license) return hbError(404, 'license_not_found')
@@ -75,7 +90,7 @@ export async function POST(req: NextRequest) {
   // Single-instance enforcement
   const boundId = license.instanceId
 
-  if (boundId !== null && boundId !== (instance_id as string)) {
+  if (boundId !== null && boundId !== instanceId) {
     return hbError(409, 'license_already_bound')
   }
 
@@ -85,14 +100,16 @@ export async function POST(req: NextRequest) {
 
     // Proof-of-possession: verify signature against the provided public key before binding.
     // Prevents an attacker from claiming a license with a key they don't control.
+    // Use raw body (not parsed.data) — Zod strips unknown keys, which would break the
+    // canonical JSON the client signed.
     const { signature: _sig0, instance_public_key: _ipk0, ...toSign0 } = body
-    if (!verifyInstanceSignature(canonicalJson(toSign0), signature as string, instance_public_key as string)) {
+    if (!verifyInstanceSignature(canonicalJson(toSign0), validatedSignature, instance_public_key)) {
       return hbError(401, 'invalid_signature')
     }
 
     // Claim nonce only after signature is verified — unauthenticated requests must not
     // consume nonce slots and pollute the dedup map.
-    if (!claimNonce('hb', `${license_id as string}:${nonce as string}`)) {
+    if (!claimNonce('hb', `${licenseId}:${validatedNonce}`)) {
       return hbError(400, 'replay_rejected')
     }
 
@@ -100,18 +117,18 @@ export async function POST(req: NextRequest) {
       await db.$transaction(async (tx) => {
         const bound = await tx.license.updateMany({
           where: { id: license.id, instanceId: null },
-          data: { instanceId: instance_id as string },
+          data: { instanceId: instanceId },
         })
         if (bound.count === 0) throw new Error('license_already_bound')
 
         await tx.instance.create({
           data: {
             licenseId: license.id,
-            instanceUuid: instance_id as string,
-            publicKey: instance_public_key as string,
-            latestSequence: BigInt(sequence),
-            lastVersion: (version as string) ?? null,
-            lastUsage: (usage as object) ?? null,
+            instanceUuid: instanceId,
+            publicKey: instance_public_key,
+            latestSequence: BigInt(validatedSequence),
+            lastVersion: version ?? null,
+            lastUsage: (usage ?? null) as Prisma.InputJsonValue,
           },
         })
 
@@ -120,7 +137,7 @@ export async function POST(req: NextRequest) {
             licenseId: license.id,
             type: 'INSTANCE_BIND',
             payload: {
-              instance_id: instance_id as string,
+              instance_id: instanceId,
               client_ip: getClientIp(req),
             } as Prisma.InputJsonValue,
           },
@@ -135,12 +152,12 @@ export async function POST(req: NextRequest) {
   } else {
     // Bound instance — verify and update
     const instance = await db.instance.findUnique({
-      where: { instanceUuid: instance_id as string },
+      where: { instanceUuid: instanceId },
     })
     if (!instance) return hbError(500, 'instance_record_missing')
 
     // Replay protection: sequence must be strictly increasing
-    if (BigInt(sequence) <= instance.latestSequence) {
+    if (BigInt(validatedSequence) <= instance.latestSequence) {
       return hbError(400, 'replay_rejected')
     }
 
@@ -148,21 +165,21 @@ export async function POST(req: NextRequest) {
     if (!instance.publicKey) return hbError(500, 'instance_key_missing')
     const { signature: _sig, instance_public_key: _ipk, ...toSign } = body
     const payloadBytes = canonicalJson(toSign)
-    const valid = verifyInstanceSignature(payloadBytes, signature as string, instance.publicKey)
+    const valid = verifyInstanceSignature(payloadBytes, validatedSignature, instance.publicKey)
     if (!valid) return hbError(401, 'invalid_signature')
 
     // Claim nonce after signature is verified — only authenticated requests consume a slot.
-    if (!claimNonce('hb', `${license_id as string}:${nonce as string}`)) {
+    if (!claimNonce('hb', `${licenseId}:${validatedNonce}`)) {
       return hbError(400, 'replay_rejected')
     }
 
     await db.instance.update({
       where: { id: instance.id },
       data: {
-        latestSequence: BigInt(sequence),
+        latestSequence: BigInt(validatedSequence),
         lastSeenAt: new Date(),
-        lastVersion: (version as string) ?? null,
-        lastUsage: (usage as object) ?? null,
+        lastVersion: version ?? null,
+        lastUsage: (usage ?? null) as Prisma.InputJsonValue,
       },
     })
   }
@@ -172,10 +189,10 @@ export async function POST(req: NextRequest) {
       licenseId: license.id,
       type: 'HEARTBEAT',
       payload: {
-        instance_id: instance_id as string,
-        version: (version as string) ?? null,
+        instance_id: instanceId,
+        version: version ?? null,
         usage: (usage ?? null) as Prisma.InputJsonValue,
-        sequence: sequence,
+        sequence: validatedSequence,
         client_ip: getClientIp(req),
       } as Prisma.InputJsonValue,
     },

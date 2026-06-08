@@ -4,3 +4,4 @@ node_modules/
 .next/
 *.lic
 graphify-out/
+audit_license_file.md

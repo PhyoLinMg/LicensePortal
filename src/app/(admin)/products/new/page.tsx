@@ -199,7 +199,7 @@ export default function NewProductPage() {
               required
               value={form.name}
               onChange={e => set('name', e.target.value)}
-              placeholder="Handoff"
+              placeholder="MyApp"
               className="form-input"
               style={inputStyle}
             />
@@ -212,7 +212,7 @@ export default function NewProductPage() {
               pattern="[a-z0-9-]+"
               value={form.slug}
               onChange={e => set('slug', e.target.value)}
-              placeholder="handoff"
+              placeholder="myapp"
               className="form-input"
               style={inputStyle}
             />
@@ -236,7 +236,7 @@ export default function NewProductPage() {
                 type="text"
                 value={form.issuerName}
                 onChange={e => set('issuerName', e.target.value)}
-                placeholder="handoff-license-server"
+                placeholder="keyforge"
                 className="form-input"
                 style={inputStyle}
               />
