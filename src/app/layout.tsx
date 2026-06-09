@@ -10,8 +10,8 @@ const mono = IBM_Plex_Mono({
 })
 
 export const metadata: Metadata = {
-  title: 'LSRV — License Portal',
-  description: 'License issuance and management portal',
+  title: 'Keyforge',
+  description: 'License issuance and management',
 }
 
 export default async function RootLayout({ children }: { children: React.ReactNode }) {

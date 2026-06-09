@@ -50,7 +50,7 @@ export default async function AuditPage() {
         {/* Header */}
         <div className="flex items-end justify-between pb-6 bdb">
           <div>
-            <p className="text-[9px] tracking-[0.28em] fg-muted mb-2 uppercase">License Portal</p>
+            <p className="text-[9px] tracking-[0.28em] fg-muted mb-2 uppercase">Keyforge</p>
             <h1 className="text-[20px] font-semibold fg-t1 m-0 tracking-[-0.02em]">Audit Log</h1>
             <p className="text-[11px] fg-t2 mt-1.5">Immutable record — last 500 events shown</p>
           </div>

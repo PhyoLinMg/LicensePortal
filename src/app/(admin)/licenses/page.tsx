@@ -25,7 +25,7 @@ export default async function LicensesPage() {
         {/* Header */}
         <div className="flex items-end justify-between pb-6 bdb">
           <div>
-            <p className="text-[9px] tracking-[0.28em] fg-muted mb-2 uppercase">License Portal</p>
+            <p className="text-[9px] tracking-[0.28em] fg-muted mb-2 uppercase">Keyforge</p>
             <h1 className="text-[20px] font-semibold fg-t1 m-0 tracking-[-0.02em]">Licenses</h1>
           </div>
           <Link

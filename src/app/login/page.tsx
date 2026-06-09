@@ -49,8 +49,8 @@ export default function LoginPage() {
       <div className={clsx('text-center mb-[52px]', fadeIn, mounted ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-[14px]')}>
         <div className="text-[9px] tracking-[0.45em] fg-muted mb-[18px]">RESTRICTED SYSTEM</div>
         <div className="text-[34px] font-semibold tracking-[-0.025em] fg-t1 leading-[1.1]">
-          LICENSE<br />
-          <span className="fg-amber">SERVER</span>
+          KEY<br />
+          <span className="fg-amber">FORGE</span>
           <span className="fg-amber [animation:blink_1.1s_step-end_infinite]">_</span>
         </div>
       </div>

@@ -385,6 +385,9 @@ Called by running product instances. No auth — instance signs payload with its
 | Status | `error` |
 |--------|---------|
 | 400 | `missing_fields` |
+| 400 | `invalid_license_id` (`license_id` not a valid UUID) |
+| 400 | `invalid_instance_id` (`instance_id` not a valid UUID) |
+| 400 | `invalid_sequence` (`sequence` not a non-negative integer) |
 | 400 | `instance_public_key_required_on_first_heartbeat` |
 | 400 | `replay_rejected` (sequence not increasing) |
 | 401 | `invalid_signature` |
@@ -438,6 +441,8 @@ NEXT_PUBLIC_BASE_URL=https://license.yourcompany.com
 # "cf-connecting-ip" for Cloudflare, "x-real-ip" for nginx/Caddy.
 TRUSTED_PROXY_HEADER=x-real-ip
 ```
+
+> **bcrypt hash escaping:** Docker Compose interpolates `$` in `.env` files. Bcrypt hashes contain `$` characters — escape each one as `$$`. Example: `$2a$12$abc...` becomes `$$2a$$12$$abc...` in `.env`.
 
 > `KEK_BASE64` is **not** set in `.env` — it lives in OpenBao. You will generate and store it in step 3.
 

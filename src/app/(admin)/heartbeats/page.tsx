@@ -46,7 +46,7 @@ export default async function HeartbeatsPage() {
       <div className="px-8 pt-8">
         {/* Header */}
         <div className="pb-6 bdb">
-          <p className="text-[9px] tracking-[0.28em] fg-muted mb-2 uppercase">License Portal</p>
+          <p className="text-[9px] tracking-[0.28em] fg-muted mb-2 uppercase">Keyforge</p>
           <h1 className="text-[20px] font-semibold fg-t1 m-0 tracking-[-0.02em]">Heartbeats</h1>
         </div>
 

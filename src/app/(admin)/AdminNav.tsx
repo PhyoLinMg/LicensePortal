@@ -25,8 +25,7 @@ export default function AdminNav() {
     <aside className="w-[210px] bg-s1 bdr flex flex-col shrink-0 min-h-screen">
       {/* Logo */}
       <div className="px-[22px] pt-[22px] pb-[18px] bdb">
-        <div className="text-xs tracking-[0.35em] fg-amber font-semibold">LSRV</div>
-        <div className="text-[9px] tracking-[0.18em] fg-muted mt-[3px] uppercase">License Portal</div>
+        <div className="text-xs tracking-[0.2em] fg-amber font-semibold">KEYFORGE</div>
       </div>
 
       {/* Nav */}
