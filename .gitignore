@@ -6,3 +6,4 @@ node_modules/
 graphify-out/
 audit_license_file.md
 cred.txt
+SECURITY_ASSESSMENT.md
