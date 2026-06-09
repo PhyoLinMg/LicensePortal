@@ -1,21 +1,22 @@
-import { PostgreSqlContainer, type StartedPostgreSqlContainer } from '@testcontainers/postgresql'
 import { execSync } from 'child_process'
 import { randomBytes } from 'crypto'
 import bcrypt from 'bcryptjs'
 import { resolve } from 'path'
 
-let container: StartedPostgreSqlContainer
-
 export default async function () {
-  container = await new PostgreSqlContainer('postgres:16-alpine')
-    .withDatabase('license_server_test')
-    .start()
+  let stopContainer: (() => Promise<void>) | undefined
 
-  const connectionString = container.getConnectionUri()
-  process.env.DATABASE_URL = connectionString
+  if (!process.env.DATABASE_URL) {
+    const { PostgreSqlContainer } = await import('@testcontainers/postgresql')
+    const container = await new PostgreSqlContainer('postgres:16-alpine')
+      .withDatabase('license_server_test')
+      .start()
+    process.env.DATABASE_URL = container.getConnectionUri()
+    stopContainer = async () => { await container.stop() }
+  }
 
   execSync('npx prisma migrate deploy', {
-    env: { ...process.env, DATABASE_URL: connectionString },
+    env: { ...process.env },
     stdio: 'pipe',
     cwd: resolve(__dirname),
   })
@@ -29,6 +30,6 @@ export default async function () {
   process.env.NEXT_PUBLIC_BASE_URL = 'http://localhost:3001'
 
   return async () => {
-    await container.stop()
+    await stopContainer?.()
   }
 }
