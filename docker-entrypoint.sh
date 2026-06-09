@@ -4,7 +4,8 @@ set -e
 if [ -n "${VAULT_ROLE_ID}" ] && [ -n "${VAULT_SECRET_ID}" ]; then
   echo "Fetching KEK_BASE64 from Vault..."
 
-  _VAULT_TOKEN=$(node - <<'JSEOF'
+  # Write login script to a temp file so it can be retried cleanly
+  cat > /tmp/_vault_login.js <<'JSEOF'
 const http = require('http');
 const { VAULT_ADDR = 'http://vault:8200', VAULT_ROLE_ID, VAULT_SECRET_ID } = process.env;
 const body = JSON.stringify({ role_id: VAULT_ROLE_ID, secret_id: VAULT_SECRET_ID });
@@ -26,7 +27,21 @@ const req = http.request({
 req.on('error', e => { process.stderr.write('Vault unreachable: ' + e.message + '\n'); process.exit(1); });
 req.write(body); req.end();
 JSEOF
-)
+
+  _VAULT_RETRIES=0
+  _VAULT_TOKEN=""
+  while [ "$_VAULT_RETRIES" -lt 10 ]; do
+    _VAULT_TOKEN=$(node /tmp/_vault_login.js 2>/tmp/_vault_err) && break || true
+    _VAULT_RETRIES=$((_VAULT_RETRIES + 1))
+    echo "Vault not ready (attempt $_VAULT_RETRIES/10), retrying in 3s..."
+    sleep 3
+  done
+
+  if [ -z "$_VAULT_TOKEN" ]; then
+    cat /tmp/_vault_err >&2
+    echo "Error: Vault login failed after 10 attempts." >&2
+    exit 1
+  fi
 
   KEK_BASE64=$(_VAULT_TOKEN="$_VAULT_TOKEN" node - <<'JSEOF'
 const http = require('http');

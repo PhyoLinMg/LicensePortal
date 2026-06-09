@@ -13,8 +13,8 @@ const IssueLicenseSchema = z.object({
   tier: z.string().min(1).max(64),
   features: z.array(z.string().max(64)).max(100).optional(),
   limits: z.record(z.string().max(64), z.number()).optional(),
-  notBefore: z.string().datetime().optional(),
-  expiresAt: z.string().datetime(),
+  notBefore: z.coerce.date().optional(),
+  expiresAt: z.coerce.date(),
   gracePeriodDays: z.number().int().min(0).max(365).optional(),
   heartbeatUrl: z.string().url().max(2048).optional(),
 })
@@ -80,8 +80,8 @@ export async function POST(req: NextRequest) {
   if (!customer) return Response.json({ error: 'customer not found' }, { status: 404 })
 
   const licenseId = randomUUID()
-  const nbDate = notBefore ? new Date(notBefore) : new Date()
-  const expDate = new Date(expiresAt)
+  const nbDate = notBefore ?? new Date()
+  const expDate = expiresAt
 
   const defaultHeartbeatUrl =
     heartbeatUrl ??

@@ -12,7 +12,7 @@ export { TEST_PASSWORD }
 
 // ── Admin auth ──────────────────────────────────────────────────────────────
 
-export async function createAdminToken(): Promise<string> {
+async function createAdminToken(): Promise<string> {
   const secret = new TextEncoder().encode(process.env.JWT_SECRET!)
   const jti = randomUUID()
   const expiresAt = new Date(Date.now() + 2 * 60 * 60 * 1000)
@@ -36,6 +36,14 @@ export async function adminRequest(
   const req = new NextRequest(url, options as NRInit)
   req.cookies.set(COOKIE, token)
   return req
+}
+
+export async function adminJsonPost(url: string, body: object): Promise<NextRequest> {
+  return adminRequest(url, {
+    method: 'POST',
+    body: JSON.stringify(body),
+    headers: { 'Content-Type': 'application/json' },
+  })
 }
 
 export function unauthRequest(

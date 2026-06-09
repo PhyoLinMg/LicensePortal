@@ -5,7 +5,7 @@ import { jwtVerify } from 'jose'
 // /api/openapi.json is intentionally public — it documents the public enforcement
 // API (/api/v1/validate, /api/v1/heartbeat) for product integrators. Admin endpoint
 // details are present in the spec; if that changes, remove it from this list.
-const PUBLIC_PATHS = ['/login', '/api/auth/login', '/api/v1/', '/api/proxy/', '/api/openapi.json']
+const PUBLIC_PATHS = ['/login', '/api/auth/login', '/api/v1/', '/api/proxy/', '/api/openapi.json', '/api/health']
 
 function buildCsp(nonce: string): string {
   return [

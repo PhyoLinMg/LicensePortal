@@ -1,14 +1,13 @@
 import { describe, it, expect, beforeEach } from 'vitest'
 import { POST } from '@/app/api/v1/heartbeat/route'
-import { POST as LIST_POST } from '@/app/api/admin/licenses/route'
 import { NextRequest } from 'next/server'
 import { randomUUID } from 'crypto'
 import {
   truncateAll,
   createProduct,
   createCustomer,
+  createLicense,
   generateInstanceKeypair,
-  adminRequest,
 } from '@/__tests__/helpers'
 import { canonicalJson, verifyInstanceSignature } from '@/lib/crypto'
 import type { InstanceKeypair } from '@/__tests__/helpers'
@@ -61,19 +60,8 @@ describe('POST /api/v1/heartbeat', () => {
     await truncateAll()
     const product = await createProduct()
     const customer = await createCustomer()
-
-    const req = await adminRequest('http://localhost/api/admin/licenses', {
-      method: 'POST',
-      body: JSON.stringify({
-        productId: product.id,
-        customerId: customer.id,
-        tier: 'pro',
-        expiresAt: new Date(Date.now() + 30 * 86400000).toISOString(),
-      }),
-      headers: { 'Content-Type': 'application/json' },
-    })
-    const res = await LIST_POST(req)
-    licenseId = (await res.json()).id
+    const license = await createLicense({ productId: product.id, customerId: customer.id })
+    licenseId = license.id
 
     instanceId = randomUUID()
     keypair = generateInstanceKeypair()
