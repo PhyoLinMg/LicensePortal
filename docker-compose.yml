@@ -61,6 +61,7 @@ services:
       - db
       - web
       - secrets
+      - shared
     healthcheck:
       test: ["CMD-SHELL", "wget -qO /dev/null \"${NEXT_PUBLIC_BASE_URL:-http://localhost:$PORT}/api/health\""]
       interval: 10s
@@ -74,6 +75,9 @@ networks:
   secrets:
     internal: true
   web:
+  shared:
+    external: true
+    name: handoff-shared
 
 volumes:
   pgdata:
